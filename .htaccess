@@ -1,0 +1,16 @@
+# Aktifkan Mesin Rewrite URL
+RewriteEngine On
+
+# Tentukan basis URL (biasanya / jika di root domain)
+# Jika proyek Anda ada di subfolder (misal: domain.com/myapp/), ubah menjadi /myapp/
+RewriteBase /workshop-app-baron/
+
+# Abaikan rewrite jika request adalah file yang benar-benar ada
+RewriteCond %{REQUEST_FILENAME} !-f
+# Abaikan rewrite jika request adalah direktori yang benar-benar ada
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Arahkan semua request lainnya ke index.php
+# 'url' adalah parameter GET yang akan berisi path asli (misal: login atau admin/dashboard)
+# [L] = Aturan Terakhir, [QSA] = Tambahkan query string asli jika ada
+RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]
