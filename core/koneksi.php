@@ -2,9 +2,23 @@
 // core/koneksi.php
 
 // --- PERBAIKAN: Cek dulu apakah sudah didefinisikan ---
+// core/koneksi.php
+
 if (!defined('BASE_URL')) {
-    // Sesuaikan dengan nama folder project kamu di Laragon
-    define('BASE_URL', 'http://localhost/workshop-app-baron/');
+    // Cek protokol (http atau https)
+    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+
+    // Cek host (localhost atau nama domain)
+    $host = $_SERVER['HTTP_HOST'];
+
+    // Deteksi otomatis
+    if ($host == 'localhost') {
+        // Settingan Localhost (Sesuaikan foldernya)
+        define('BASE_URL', 'http://localhost/workshop-app-baron/');
+    } else {
+        // Settingan Hosting (Otomatis ambil nama domain/subdomain)
+        define('BASE_URL', $protocol . "://" . $host . "/");
+    }
 }
 // ------------------------------------------------------
 
