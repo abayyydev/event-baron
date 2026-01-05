@@ -1,9 +1,14 @@
 # Aktifkan Mesin Rewrite URL
 RewriteEngine On
 
-# Tentukan basis URL (biasanya / jika di root domain)
-# Jika proyek Anda ada di subfolder (misal: domain.com/myapp/), ubah menjadi /myapp/
-RewriteBase /workshop-app-baron/
+# --- PERUBAHAN DI SINI ---
+# Untuk di Hosting (Subdomain dev.ukmelrahma.my.id)
+# Gunakan slash tunggal '/' karena ini adalah root dari subdomain tersebut
+RewriteBase /
+
+# (Simpan baris lama ini buat cadangan kalau mau balik ke Localhost)
+# RewriteBase /workshop-app-baron/
+# -------------------------
 
 # Abaikan rewrite jika request adalah file yang benar-benar ada
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -11,6 +16,4 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
 # Arahkan semua request lainnya ke index.php
-# 'url' adalah parameter GET yang akan berisi path asli (misal: login atau admin/dashboard)
-# [L] = Aturan Terakhir, [QSA] = Tambahkan query string asli jika ada
 RewriteRule ^(.*)$ index.php?url=$1 [L,QSA]
