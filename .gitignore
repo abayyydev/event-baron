@@ -1,0 +1,28 @@
+# --- FILE RAHASIA (Wajib Ignore) ---
+# Jangan upload file koneksi yang berisi password database
+core/koneksi.php
+*.env
+
+# --- DEPENDENSI & SYSTEM ---
+# Folder vendor composer (jika pakai library luar)
+/vendor
+
+# File system (Sampah dari Mac/Windows)
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- LOGS ---
+# File error log dari server (sering muncul di cPanel)
+error_log
+*.log
+
+# --- IDE SETTINGS ---
+# Settingan text editor (VSCode, PHPStorm, dll) gak perlu diupload
+.vscode/
+.idea/
+*.sublime-workspace
+
+# --- USER UPLOADS (Opsional) ---
+# Jika kamu tidak ingin foto yang diupload user saat testing ikut ke GitHub
+# public_html/assets/img/uploads/
