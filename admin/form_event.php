@@ -436,5 +436,6 @@ require_once BASE_PATH . '/admin/templates/header.php';
 if ($is_edit) {
     require_once BASE_PATH . '/admin/templates/modal_visual_editor.php';
 }
+
 require_once BASE_PATH . '/admin/templates/footer.php';
 ?>

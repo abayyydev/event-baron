@@ -90,12 +90,13 @@ switch ($action) {
         }
 
         try {
+            // Tambahkan 'visibilitas' di daftar kolom dan tambah satu tanda tanya '?'
             $sql = "INSERT INTO workshops (
-                        penyelenggara_id, judul, deskripsi, poster, lokasi, 
-                        tipe_event, harga, tanggal_waktu, jam_selesai, nominal_denda,
-                        sertifikat_template, sertifikat_prefix, sertifikat_nomor_awal, 
-                        sertifikat_font, sertifikat_orientasi
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            penyelenggara_id, judul, deskripsi, poster, lokasi, 
+            tipe_event, harga, tanggal_waktu, jam_selesai, nominal_denda,
+            sertifikat_template, sertifikat_prefix, sertifikat_nomor_awal, 
+            sertifikat_font, sertifikat_orientasi, visibilitas
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
@@ -113,9 +114,9 @@ switch ($action) {
                 $sertifikat_prefix,
                 $sertifikat_nomor_awal,
                 $sertifikat_font,
-                $sertifikat_orientasi
+                $sertifikat_orientasi,
+                $visibilitas // <--- JANGAN LUPA TAMBAHKAN INI DI AKHIR ARRAY
             ]);
-
             send_json_response('success', 'Event berhasil ditambahkan!');
         } catch (PDOException $e) {
             send_json_response('error', 'Database Error: ' . $e->getMessage());
@@ -196,14 +197,15 @@ switch ($action) {
         }
 
         try {
+            // Tambahkan 'visibilitas=?' sebelum WHERE
             $sql = "UPDATE workshops SET 
-                    judul=?, deskripsi=?, poster=?, lokasi=?, tipe_event=?, harga=?, 
-                    tanggal_waktu=?, jam_selesai=?, nominal_denda=?, 
-                    sertifikat_template=?, sertifikat_prefix=?, sertifikat_nomor_awal=?,
-                    sertifikat_nama_fs=?, sertifikat_nama_y_percent=?, sertifikat_nama_x_percent=?,
-                    sertifikat_nomor_fs=?, sertifikat_nomor_y_percent=?, sertifikat_nomor_x_percent=?,
-                    sertifikat_font=?, sertifikat_orientasi=? 
-                    WHERE id=? AND penyelenggara_id=?";
+        judul=?, deskripsi=?, poster=?, lokasi=?, tipe_event=?, harga=?, 
+        tanggal_waktu=?, jam_selesai=?, nominal_denda=?, 
+        sertifikat_template=?, sertifikat_prefix=?, sertifikat_nomor_awal=?,
+        sertifikat_nama_fs=?, sertifikat_nama_y_percent=?, sertifikat_nama_x_percent=?,
+        sertifikat_nomor_fs=?, sertifikat_nomor_y_percent=?, sertifikat_nomor_x_percent=?,
+        sertifikat_font=?, sertifikat_orientasi=?, visibilitas=? 
+        WHERE id=? AND penyelenggara_id=?";
 
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
@@ -227,6 +229,7 @@ switch ($action) {
                 $s_nomor_x,
                 $sertifikat_font,
                 $sertifikat_orientasi,
+                $visibilitas, // <--- TAMBAHKAN INI (urutan harus sebelum $event_id)
                 $event_id,
                 $penyelenggara_id
             ]);

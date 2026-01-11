@@ -4,10 +4,10 @@ RewriteEngine On
 # --- PERUBAHAN DI SINI ---
 # Untuk di Hosting (Subdomain dev.ukmelrahma.my.id)
 # Gunakan slash tunggal '/' karena ini adalah root dari subdomain tersebut
-RewriteBase /
+# RewriteBase /
 
 # (Simpan baris lama ini buat cadangan kalau mau balik ke Localhost)
-# RewriteBase /workshop-app-baron/
+RewriteBase /workshop-app-baron/
 # -------------------------
 
 # Abaikan rewrite jika request adalah file yang benar-benar ada
