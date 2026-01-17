@@ -46,15 +46,18 @@ try {
     $_SESSION['owner_id'] = $user['owner_id'];
     $_SESSION['penyelenggara_id_bersama'] = $id_bersama;
 
-    // 3. Set Session Data Diri (PENTING AGAR DASHBOARD TIDAK ERROR)
-    // Menggunakan nama_lengkap sesuai database
+    // 3. Set Session Data Diri
     $_SESSION['nama_lengkap'] = $user['nama_lengkap'];
-
-    // Tambahkan Email (biar konsisten dengan login email)
     $_SESSION['email'] = $user['email'];
 
-    // Tambahkan Foto Profil (gunakan default jika kosong)
-    $_SESSION['foto_profil'] = !empty($user['foto_profil']) ? $user['foto_profil'] : '../assets/img/admin.jpg';
+    // --- PERBAIKAN DI SINI ---
+    if (!empty($user['foto_profil'])) {
+        // Kita tambahkan folder 'assets/uploads/profil/' di depan nama file dari database
+        $_SESSION['foto_profil'] = 'assets/uploads/profil/' . $user['foto_profil'];
+    } else {
+        // Default jika tidak ada foto
+        $_SESSION['foto_profil'] = 'assets/img/default-avatar.png';
+    }
 
     // Bersihkan OTP setelah digunakan
     $stmt_clear = $pdo->prepare("UPDATE users SET otp_code = NULL, otp_expires_at = NULL WHERE id = ?");

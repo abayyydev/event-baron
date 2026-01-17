@@ -167,55 +167,105 @@ try {
     $IMG_WIDTH = imagesx($image);
     $IMG_HEIGHT = imagesy($image);
 
-    // Fungsi Tulis Tengah
-    function write_centered_text($img, $size, $angle, $pct_x, $pct_y, $color, $font, $text, $w, $h)
-    {
-        $box = imagettfbbox($size, $angle, $font, $text);
-        $text_w = abs($box[2] - $box[0]);
-        $text_h = abs($box[7] - $box[1]);
+    // ... (Kode load image di atas tetap sama) ...
 
-        $x = ($w * ($pct_x / 100));
-        $y = ($h * ($pct_y / 100));
+    $text_color = imagecolorallocate($image, 15, 15, 106); // Sesuaikan warna (RGB)
+    $IMG_WIDTH = imagesx($image);
+    $IMG_HEIGHT = imagesy($image);
 
-        // Auto center jika posisi X di kisaran 45-55%
-        if ($pct_x >= 45 && $pct_x <= 55) {
-            $x = $x - ($text_w / 2);
-        }
+    // ===================================================================
+    // PERBAIKAN LOGIKA PRESISI (SCALING & ANCHORING)
+    // ===================================================================
 
-        // Adjust Y baseline (GD menulis dari bawah ke atas untuk Y)
-        $y += ($text_h / 2);
+    // 1. Definisikan Lebar Canvas di Visual Editor (Harus sama dengan CSS)
+    // Di file modal_visual_editor.php, lebar container landscape adalah 800px
+    $EDITOR_BASE_WIDTH = 800;
 
-        imagettftext($img, $size, $angle, $x, $y, $color, $font, $text);
+    // Jika gambar asli portrait (tinggi > lebar), base width editor biasanya 565px
+    if ($IMG_HEIGHT > $IMG_WIDTH) {
+        $EDITOR_BASE_WIDTH = 565;
     }
 
-    // Tulis Nama
-    write_centered_text(
+    // 2. Hitung SKALA (Berapa kali lipat gambar asli dibanding preview)
+    // Contoh: Asli 3508px / Editor 800px = Scale Factor 4.385
+    $SCALE = $IMG_WIDTH / $EDITOR_BASE_WIDTH;
+
+    /**
+     * Fungsi untuk meniru perilaku CSS: 
+     * left: X%; top: Y%; transform: translate(-50%, -50%);
+     */
+    function write_responsive_text($img, $fs_input, $angle, $pct_x, $pct_y, $color, $font, $text, $img_w, $img_h, $scale)
+    {
+        // A. KONVERSI UKURAN FONT
+        // Input user (px di editor) * Scale Factor = Px di gambar asli
+        $real_size_px = $fs_input * $scale;
+
+        // Konversi PX ke Point untuk GD Library (1px ~= 0.75pt)
+        $size_pt = $real_size_px * 0.75;
+
+        // B. HITUNG DIMENSI TEKS (BOUNDING BOX)
+        $box = imagettfbbox($size_pt, $angle, $font, $text);
+
+        // Lebar teks (Kanan - Kiri)
+        $text_w = abs($box[2] - $box[0]);
+
+        // Tinggi teks visual (Gunakan Top - Bottom huruf kapital untuk presisi visual)
+        // box[5] adalah atas, box[1] adalah bawah
+        $text_h = abs($box[5] - $box[1]);
+
+        // C. TENTUKAN KOORDINAT TITIK TENGAH (Anchor Point)
+        $center_x = $img_w * ($pct_x / 100);
+        $center_y = $img_h * ($pct_y / 100);
+
+        // D. GESER (OFFSET) AGAR BENAR-BENAR TENGAH
+        // Rumus translate(-50%, -50%):
+        // X: Titik tengah dikurangi setengah lebar teks
+        $pos_x = $center_x - ($text_w / 2);
+
+        // Y: Titik tengah DITAMBAH setengah tinggi teks 
+        // (Karena GD menggambar dari bawah/baseline, bukan dari atas)
+        $pos_y = $center_y + ($text_h / 2);
+
+        // Debugging (Opsional: Cek error log jika posisi masih aneh)
+        // error_log("Text: $text | Scale: $scale | Pt: $size_pt | X: $pos_x | Y: $pos_y");
+
+        // Tulis Teks
+        imagettftext($img, $size_pt, $angle, $pos_x, $pos_y, $color, $font, $text);
+    }
+
+    // --- EKSEKUSI PENULISAN ---
+
+    // 1. Tulis Nama Peserta
+    write_responsive_text(
         $image,
-        $data['sertifikat_nama_fs'] ?: 48,
-        0,
+        $data['sertifikat_nama_fs'] ?: 40,    // Default size jika kosong
+        0,                                    // Angle
         $data['sertifikat_nama_x_percent'] ?: 50,
         $data['sertifikat_nama_y_percent'] ?: 50,
         $text_color,
         $font_path,
         $nama_peserta,
         $IMG_WIDTH,
-        $IMG_HEIGHT
+        $IMG_HEIGHT,
+        $SCALE // <--- Parameter Kunci
     );
 
-    // Tulis Nomor
-    write_centered_text(
+    // 2. Tulis Nomor Sertifikat
+    write_responsive_text(
         $image,
-        $data['sertifikat_nomor_fs'] ?: 24,
-        0,
+        $data['sertifikat_nomor_fs'] ?: 20,   // Default size jika kosong
+        0,                                    // Angle
         $data['sertifikat_nomor_x_percent'] ?: 50,
-        $data['sertifikat_nomor_y_percent'] ?: 65,
+        $data['sertifikat_nomor_y_percent'] ?: 60,
         $text_color,
         $font_path,
         $nomor_sertifikat,
         $IMG_WIDTH,
-        $IMG_HEIGHT
+        $IMG_HEIGHT,
+        $SCALE // <--- Parameter Kunci
     );
 
+    // ... (Lanjut ke proses simpan file) ...
     // Simpan File
     $file_name = 'Sertifikat_' . preg_replace('/[^a-zA-Z0-9]/', '_', $nama_peserta) . '_' . time() . '.jpg';
     $output_path = $output_dir . $file_name;

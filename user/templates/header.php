@@ -1,197 +1,327 @@
 <?php
 // user/templates/header.php
 
-// 1. Start Session jika belum aktif
+// 1. Mulai sesi
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 2. DEFINE BASE_URL (Opsional, agar link tidak broken)
-// Sesuaikan dengan folder project Anda di localhost
-if (!defined('BASE_URL')) {
-    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
-    $host = $_SERVER['HTTP_HOST'];
-    // Ganti 'workshop-app-baron' sesuai nama folder di htdocs/www laragon Anda
-    define('BASE_URL', $protocol . "://" . $host . "/workshop-app-baron/");
+// 2. Cegah caching
+header("Cache-Control: no-cache, no-store, must-revalidate");
+header("Pragma: no-cache");
+header("Expires: 0");
+
+// 3. Cek Login & Role
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'peserta') {
+    // Arahkan ke folder root (naik satu level dari user/)
+    header("Location: ../login.php");
+    exit();
 }
 
-// 3. INCLUDE KONEKSI (Gunakan __DIR__ agar path akurat)
-// __DIR__ = user/templates/
-// Naik 2 level ke atas (../../) untuk mencari folder core
-require_once __DIR__ . '/../../core/koneksi.php';
+// 4. Data User
+$nama_user = $_SESSION['nama_lengkap'] ?? 'Peserta';
 
-// 4. CEK LOGIN OTOMATIS
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'peserta') {
-    header("Location: " . BASE_URL . "login.php");
-    exit;
+// --- LOGIKA PERBAIKAN PATH FOTO PROFIL (Sama dengan Admin) ---
+$foto_db = $_SESSION['foto_profil'] ?? '';
+
+if (!empty($foto_db)) {
+    // Cek apakah string path mengandung "assets/"
+    if (strpos($foto_db, 'assets/') !== false) {
+        // Jika di database tersimpan "assets/uploads/...", tambahkan "../" di depannya
+        // karena file ini berada di folder user/ (satu level di dalam root)
+        $foto_profil = '../' . $foto_db;
+    } else {
+        // Jika di database hanya nama file, arahkan ke folder upload
+        $foto_profil = '../assets/uploads/profil/' . $foto_db;
+    }
+} else {
+    // Foto default
+    $foto_profil = '../assets/img/default-avatar.png';
 }
 
-// Default Title
-if (!isset($page_title))
-    $page_title = "Dashboard Peserta";
-if (!isset($current_page))
-    $current_page = "dashboard";
-
-// Data User untuk Navbar
-$nama_user_nav = $_SESSION['nama_user'] ?? 'Peserta';
+// 5. Setup Halaman Aktif
+$page_title = $page_title ?? 'Dashboard Santri';
+$current_page = $current_page ?? basename($_SERVER['PHP_SELF'], ".php");
 ?>
+
 <!DOCTYPE html>
 <html lang="id">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $page_title ?> | Ponpes Al Ihsan Baron</title>
+    <title><?= htmlspecialchars($page_title) ?> | Panel Santri</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
                     colors: {
-                        primary: '#166534', // Hijau Ponpes
-                        secondary: '#D4AF37', // Emas
-                        dark: '#0f4c25',
+                        primary: {
+                            50: '#f0fdf6', 100: '#dcfce8', 200: '#bbf7d0', 300: '#86efac',
+                            400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
+                            800: '#166534', 900: '#14532d', 950: '#052e16',
+                        },
+                        gold: {
+                            100: '#fef3c7', 200: '#fde68a', 300: '#fcd34d', 400: '#fbbf24',
+                            500: '#f59e0b', 600: '#d97706', 700: '#b45309', 800: '#92400e',
+                            900: '#78350f',
+                        },
+                        slate: {
+                            50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1',
+                            400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155',
+                            800: '#1e293b', 900: '#0f172a',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-in-out',
+                        'slide-in': 'slideIn 0.3s ease-out',
+                        'pulse-subtle': 'pulseSubtle 2s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideIn: { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(0)' } },
+                        pulseSubtle: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0.8' } }
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.08)',
+                        'soft-lg': '0 10px 40px -4px rgba(0, 0, 0, 0.12)',
+                        'gold-glow': '0 0 20px rgba(245, 158, 11, 0.15)',
                     }
                 }
             }
         }
     </script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        /* Shared Styles */
+        .glassmorphism { background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .glassmorphism-dark { background: rgba(22, 101, 52, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(245, 158, 11, 0.1); }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #16a34a, #f59e0b); border-radius: 10px; transition: all 0.3s ease; }
+        ::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #15803d, #d97706); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        body {
-            font-family: 'Inter', sans-serif;
-        }
+        /* Typography & Layout */
+        .gradient-text { background: linear-gradient(135deg, #16a34a 0%, #f59e0b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .sidebar-transition { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .menu-transition { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-
-        .sidebar-active {
-            background-color: rgba(255, 255, 255, 0.1);
-            border-left: 4px solid #D4AF37;
-            /* Emas */
-            color: #fff;
-        }
+        /* Collapsed Sidebar Logic */
+        #sidebar.collapsed { width: 5rem; }
+        #sidebar.collapsed .menu-text, #sidebar.collapsed .group-title, #sidebar.collapsed .logo-full { display: none !important; opacity: 0; width: 0; }
+        #sidebar.collapsed .logo-icon { display: block !important; }
+        #sidebar.collapsed .menu-link { justify-content: center; padding-left: 0; padding-right: 0; border-radius: 12px; }
+        #sidebar.collapsed .menu-icon { margin-right: 0; transform: scale(1.1); }
+        
+        .logo-icon { display: none; }
+        .active-glow { box-shadow: 0 0 15px rgba(245, 158, 11, 0.25); }
+        
+        .modern-card { background: white; border-radius: 16px; box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08); border: 1px solid rgba(22, 163, 74, 0.1); transition: all 0.3s ease; }
+        .modern-card:hover { box-shadow: 0 10px 40px -4px rgba(0, 0, 0, 0.12); transform: translateY(-2px); }
     </style>
 </head>
 
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-gradient-to-br from-slate-50 to-primary-50 text-slate-800 font-sans antialiased overflow-hidden">
 
-    <div class="flex h-screen overflow-hidden">
+    <div class="flex h-screen relative">
 
-        <aside class="hidden md:flex flex-col w-64 bg-primary text-white shadow-xl z-20">
-            <div class="h-16 flex items-center justify-center border-b border-green-800 bg-dark px-4">
-                <div class="flex items-center gap-2 font-bold text-lg tracking-wide">
-                    <i class="fas fa-mosque text-secondary"></i>
-                    <span>SANTRI PANEL</span>
+        <div id="mobile-overlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 hidden lg:hidden transition-all duration-300 opacity-0"></div>
+
+        <aside id="sidebar" class="sidebar-transition absolute lg:relative z-50 w-64 h-full bg-gradient-to-b from-primary-800 via-primary-900 to-primary-950 text-white flex flex-col transform -translate-x-full lg:translate-x-0 shadow-2xl border-r border-gold-500/20">
+
+            <div class="h-20 flex items-center justify-center border-b border-white/10 relative px-4 shrink-0 glassmorphism-dark">
+                <div class="logo-full transition-all duration-300 flex items-center justify-start pl-2">
+                    <img src="../assets/img/images/admin-ajax_2.png" alt="Logo Pondok" class="h-10 w-auto object-contain drop-shadow-md hover:scale-105 transition-transform duration-300">
                 </div>
-            </div>
-
-            <div class="flex-1 overflow-y-auto py-4">
-                <nav class="space-y-1 px-2">
-
-                    <a href="dashboard.php"
-                        class="flex items-center px-4 py-3 text-sm font-medium rounded-r-lg transition-colors hover:bg-green-700 <?= $current_page == 'dashboard' ? 'sidebar-active' : 'text-green-100' ?>">
-                        <i class="fas fa-home w-6"></i>
-                        <span>Dashboard</span>
-                    </a>
-
-                    <a href="riwayat_transaksi.php"
-                        class="flex items-center px-4 py-3 text-sm font-medium rounded-r-lg transition-colors hover:bg-green-700 <?= $current_page == 'transaksi' ? 'sidebar-active' : 'text-green-100' ?>">
-                        <i class="fas fa-receipt w-6"></i>
-                        <span>Riwayat Transaksi</span>
-                    </a>
-
-                    <a href="materi.php"
-                        class="flex items-center px-4 py-3 text-sm font-medium rounded-r-lg transition-colors hover:bg-green-700 <?= $current_page == 'materi' ? 'sidebar-active' : 'text-green-100' ?>">
-                        <i class="fas fa-book-open w-6"></i>
-                        <span>Materi Belajar</span>
-                    </a>
-
-                    <div class="pt-4 mt-4 border-t border-green-700">
-                        <p class="px-4 text-xs font-semibold text-green-300 uppercase tracking-wider mb-2">Akun</p>
-
-                        <a href="profil.php"
-                            class="flex items-center px-4 py-3 text-sm font-medium rounded-r-lg transition-colors hover:bg-green-700 <?= $current_page == 'profil' ? 'sidebar-active' : 'text-green-100' ?>">
-                            <i class="fas fa-user-cog w-6"></i>
-                            <span>Edit Profil</span>
-                        </a>
-
-                        <a href="<?= BASE_URL ?>logout"
-                            class="flex items-center px-4 py-3 text-sm font-medium rounded-r-lg text-red-200 hover:bg-red-900/50 hover:text-white transition-colors">
-                            <i class="fas fa-sign-out-alt w-6"></i>
-                            <span>Keluar</span>
-                        </a>
-                    </div>
-
-                </nav>
-            </div>
-
-            <div class="p-4 border-t border-green-800 bg-dark">
-                <div class="flex items-center gap-3">
-                    <div
-                        class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-primary font-bold">
-                        <?= strtoupper(substr($nama_user_nav, 0, 1)) ?>
-                    </div>
-                    <div class="overflow-hidden">
-                        <p class="text-sm font-medium text-white truncate"><?= htmlspecialchars($nama_user_nav) ?></p>
-                        <p class="text-xs text-green-300">Peserta</p>
-                    </div>
+                <div class="logo-icon transition-all duration-300">
+                    <img src="../assets/img/images/logo-pondok.png" alt="Logo Pondok" class="h-10 w-auto object-contain drop-shadow-md hover:scale-105 transition-transform duration-300">
                 </div>
+                <button id="closeSidebarMobile" class="lg:hidden absolute right-4 text-gold-300 hover:text-gold-100 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
             </div>
+
+            <nav class="flex-1 overflow-y-auto py-4 px-2 space-y-1 no-scrollbar">
+                <?php
+                function renderMenu($link, $icon, $label, $activePage)
+                {
+                    $isActive = ($activePage == $link || strpos($activePage, $link) !== false);
+                    $baseClass = "menu-link flex items-center px-4 py-3 rounded-xl transition-all duration-200 group mb-1 relative overflow-hidden menu-transition";
+
+                    if ($isActive) {
+                        $colors = "bg-gradient-to-r from-primary-700/80 to-primary-800 text-white shadow-lg active-glow";
+                        $iconColor = "text-gold-400";
+                        $indicator = '<div class="absolute right-3 w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse-subtle"></div>';
+                    } else {
+                        $colors = "text-slate-300 hover:bg-white/5 hover:text-white hover:shadow-md hover:translate-x-1";
+                        $iconColor = "text-slate-400 group-hover:text-gold-300 group-hover:scale-110 transition-all";
+                        $indicator = '';
+                    }
+
+                    echo '
+                    <a href="' . $link . '" class="' . $baseClass . ' ' . $colors . '" title="' . $label . '">
+                        <div class="relative">
+                            <i class="fas ' . $icon . ' ' . $iconColor . ' w-5 text-center text-base menu-icon flex-shrink-0 transition-all"></i>
+                        </div>
+                        <span class="menu-text ml-3 text-sm font-medium tracking-wide whitespace-nowrap transition-opacity duration-300">' . $label . '</span>
+                        ' . $indicator . '
+                        <div class="absolute inset-0 bg-gradient-to-r from-gold-500/0 to-gold-500/0 group-hover:from-gold-500/5 group-hover:to-gold-500/10 transition-all duration-300"></div>
+                    </a>';
+                }
+
+                function renderGroupTitle($title)
+                {
+                    echo '<p class="group-title px-4 text-[11px] font-bold text-primary-300/60 uppercase tracking-widest mt-6 mb-3 flex items-center">
+                            <span class="h-px flex-1 bg-primary-700/50 mr-3"></span>' . $title . '<span class="h-px flex-1 bg-primary-700/50 ml-3"></span>
+                          </p>';
+                }
+                ?>
+
+                <?php renderGroupTitle('Panel Santri'); ?>
+                <?php renderMenu('dashboard.php', 'fa-home', 'Dashboard', $current_page); ?>
+                <?php renderMenu('materi.php', 'fa-book-open', 'Materi Belajar', $current_page); ?>
+                <?php renderMenu('riwayat_transaksi.php', 'fa-receipt', 'Riwayat Transaksi', $current_page); ?>
+
+                <?php renderGroupTitle('Akun'); ?>
+                <?php renderMenu('profil.php', 'fa-user-cog', 'Edit Profil', $current_page); ?>
+            </nav>
         </aside>
 
-        <div class="flex-1 flex flex-col overflow-hidden relative">
+        <div class="flex-1 flex flex-col h-full relative overflow-hidden bg-gradient-to-br from-slate-50 to-primary-50">
 
-            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-4 lg:px-8 z-10 relative">
-
-                <button id="mobile-menu-btn" class="md:hidden text-gray-600 focus:outline-none">
-                    <i class="fas fa-bars text-2xl"></i>
-                </button>
-
-                <h2 class="hidden md:block text-xl font-bold text-gray-800"><?= $page_title ?></h2>
+            <header class="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-6 sticky top-0 z-30 shadow-soft">
+                
+                <div class="flex items-center gap-4">
+                    <button id="sidebarToggleBtn" class="p-2.5 rounded-xl text-slate-600 hover:bg-primary-50 hover:text-primary-700 focus:outline-none transition-all duration-200 hover:shadow-sm border border-slate-200 hover:border-primary-300">
+                        <i class="fas fa-bars text-lg"></i>
+                    </button>
+                    <div class="ml-2">
+                        <h1 class="text-xl font-bold text-slate-900 leading-tight gradient-text">
+                            <?= htmlspecialchars($page_title) ?>
+                        </h1>
+                        <p class="text-sm text-slate-500 mt-0.5">Selamat datang, Santri!</p>
+                    </div>
+                </div>
 
                 <div class="flex items-center gap-4">
-                    <button class="relative p-2 text-gray-400 hover:text-primary transition">
-                        <i class="far fa-bell text-xl"></i>
-                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                    </button>
+                    <div class="relative">
+                        <button class="relative p-2.5 rounded-xl text-slate-500 hover:text-gold-600 hover:bg-gold-50 transition-all duration-200 group">
+                            <i class="far fa-bell text-xl"></i>
+                            <span class="absolute top-2 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                        </button>
+                    </div>
+
+                    <div class="h-10 w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent"></div>
 
                     <div class="relative group">
-                        <button class="flex items-center gap-2 focus:outline-none">
-                            <span
-                                class="text-sm font-medium text-gray-700 hidden md:block"><?= htmlspecialchars($nama_user_nav) ?></span>
-                            <img src="https://ui-avatars.com/api/?name=<?= urlencode($nama_user_nav) ?>&background=166534&color=fff"
-                                alt="Avatar" class="w-8 h-8 rounded-full border border-gray-200">
+                        <button class="flex items-center gap-3 focus:outline-none group">
+                            <div class="text-right hidden lg:block">
+                                <p class="text-sm font-bold text-slate-800 leading-none"><?= htmlspecialchars($nama_user) ?></p>
+                                <div class="flex items-center justify-end gap-1 mt-0.5">
+                                    <span class="text-xs text-primary-600 font-semibold px-2 py-0.5 rounded-full bg-primary-100">Santri</span>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <img src="<?= htmlspecialchars($foto_profil) ?>" alt="Profile" 
+                                     class="w-11 h-11 rounded-xl object-cover border-2 border-primary-200 shadow-sm group-hover:border-gold-400 group-hover:shadow-gold-glow transition-all duration-300">
+                                <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-white"></div>
+                            </div>
+                            <i class="fas fa-chevron-down text-slate-400 group-hover:text-gold-500 text-xs transition-transform group-hover:rotate-180 duration-200"></i>
                         </button>
-                        <div
-                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 hidden group-hover:block border border-gray-100">
-                            <a href="profil.php" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Profil
-                                Saya</a>
-                            <div class="border-t border-gray-100 my-1"></div>
-                            <a href="<?= BASE_URL ?>logout"
-                                class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Logout</a>
+
+                        <div class="absolute right-0 mt-4 w-56 bg-white rounded-2xl shadow-soft-lg border border-slate-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50 overflow-hidden animate-fade-in">
+                            <div class="px-4 py-3 border-b border-slate-100 bg-gradient-to-r from-primary-50 to-gold-50">
+                                <p class="text-sm font-bold text-slate-900 truncate"><?= htmlspecialchars($nama_user) ?></p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-xs font-medium text-primary-700 bg-primary-100 px-2 py-0.5 rounded-full">Santri</span>
+                                    <span class="text-xs text-slate-500">• Online</span>
+                                </div>
+                            </div>
+
+                            <div class="py-2">
+                                <a href="profil.php" class="flex items-center px-4 py-2.5 text-sm text-slate-700 hover:bg-primary-50 hover:text-primary-700 transition-colors group/item">
+                                    <i class="far fa-user mr-3 w-4 text-primary-500 group-hover/item:text-gold-500"></i>
+                                    <span>Profil Saya</span>
+                                </a>
+                            </div>
+
+                            <div class="border-t border-slate-100 my-1"></div>
+
+                            <a href="../logout.php" class="flex items-center px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors group/item">
+                                <i class="fas fa-sign-out-alt mr-3 w-4 group-hover/item:rotate-90 transition-transform"></i>
+                                <span>Keluar Sistem</span>
+                            </a>
                         </div>
                     </div>
                 </div>
             </header>
 
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 lg:p-8">
+            <main class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', () => {
+                        const sidebar = document.getElementById('sidebar');
+                        const toggleBtn = document.getElementById('sidebarToggleBtn');
+                        const closeBtnMobile = document.getElementById('closeSidebarMobile');
+                        const overlay = document.getElementById('mobile-overlay');
+
+                        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+
+                        if (window.innerWidth >= 1024 && isCollapsed) {
+                            sidebar.classList.add('collapsed');
+                        } else {
+                            sidebar.classList.remove('collapsed');
+                        }
+
+                        function toggleSidebar() {
+                            if (window.innerWidth < 1024) {
+                                const isClosed = sidebar.classList.contains('-translate-x-full');
+                                if (isClosed) openMobileSidebar();
+                                else closeMobileSidebar();
+                            } else {
+                                sidebar.classList.toggle('collapsed');
+                                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                            }
+                        }
+
+                        function openMobileSidebar() {
+                            sidebar.classList.remove('-translate-x-full');
+                            overlay.classList.remove('hidden');
+                            setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+                        }
+
+                        function closeMobileSidebar() {
+                            sidebar.classList.add('-translate-x-full');
+                            overlay.classList.add('opacity-0');
+                            setTimeout(() => overlay.classList.add('hidden'), 300);
+                        }
+
+                        toggleBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleSidebar(); });
+                        if (closeBtnMobile) closeBtnMobile.addEventListener('click', closeMobileSidebar);
+                        overlay.addEventListener('click', closeMobileSidebar);
+
+                        window.addEventListener('resize', () => {
+                            if (window.innerWidth >= 1024) {
+                                overlay.classList.add('hidden', 'opacity-0');
+                                sidebar.classList.remove('-translate-x-full');
+                                const shouldCollapse = localStorage.getItem('sidebarCollapsed') === 'true';
+                                if (shouldCollapse) sidebar.classList.add('collapsed');
+                                else sidebar.classList.remove('collapsed');
+                            } else {
+                                sidebar.classList.add('-translate-x-full');
+                                sidebar.classList.remove('collapsed');
+                            }
+                        });
+                    });
+                </script>

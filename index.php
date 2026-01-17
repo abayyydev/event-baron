@@ -67,6 +67,15 @@ switch ($segments[0]) {
             case 'kelola_tim':
                 $file_to_include = 'admin/kelola_tim.php';
                 break;
+            case 'kelola_user':
+                $file_to_include = 'admin/kelola_user.php';
+                break;
+            case 'kelola_font':
+                $file_to_include = 'admin/kelola_font.php';
+                break;
+            case 'diskusi':
+                $file_to_include = 'admin/diskusi.php';
+                break;
             case 'proses_tambah_anggota': // Perlu ditambahkan
                 $file_to_include = 'admin/proses_tambah_anggota.php';
                 break;

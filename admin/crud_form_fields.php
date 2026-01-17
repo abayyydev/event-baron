@@ -1,114 +1,118 @@
 <?php
-// Selalu aktifkan error reporting saat development
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
-// Panggil koneksi dan mulai session
-require_once '../core/koneksi.php'; // Sesuaikan path jika perlu
+// Mulai session
 session_start();
 
-// Fungsi helper untuk mengirim respons JSON
-function send_json_response($status, $message, $data = null)
+// Set header JSON agar Javascript bisa membacanya
+header('Content-Type: application/json');
+
+// Matikan display error agar pesan error PHP tidak merusak format JSON
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
+require_once '../core/koneksi.php';
+
+// Fungsi helper untuk kirim response
+function send_response($status, $message, $data = null)
 {
-    header('Content-Type: application/json');
     echo json_encode(['status' => $status, 'message' => $message, 'data' => $data]);
     exit();
 }
 
-// Keamanan: Pastikan yang akses adalah penyelenggara yang login
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'penyelenggara') {
-    send_json_response('error', 'Akses ditolak. Anda harus login sebagai penyelenggara.');
+// Cek Login
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'penyelenggara') {
+    send_response('error', 'Akses ditolak. Silakan login ulang.');
 }
 
-// Ambil ID penyelenggara dari session untuk memastikan mereka hanya bisa mengubah event milik sendiri
-$penyelenggara_id = $_SESSION['penyelenggara_id_bersama'];
 $action = $_POST['action'] ?? '';
 
-// Validasi dasar input
-if (empty($action)) {
-    send_json_response('error', 'Aksi tidak valid.');
-}
+try {
+    switch ($action) {
+        case 'tambah':
+            // 1. Ambil Data
+            $workshop_id = $_POST['workshop_id'] ?? null;
+            $label = $_POST['label'] ?? null;
+            $field_type = $_POST['field_type'] ?? null;
+            $options = $_POST['options'] ?? '';
+            $is_required = isset($_POST['is_required']) ? 1 : 0;
+            $placeholder = $_POST['placeholder'] ?? '';
 
-// Routing aksi CRUD
-switch ($action) {
-    case 'tambah':
-        // Ambil data dari POST
-        $workshop_id = $_POST['workshop_id'] ?? null;
-        $label = trim($_POST['label'] ?? '');
-        $field_type = $_POST['field_type'] ?? '';
-        $options = trim($_POST['options'] ?? '');
-        $is_required = isset($_POST['is_required']) ? 1 : 0;
-        $placeholder = trim($_POST['placeholder'] ?? '');
+            // 2. Validasi
+            if (empty($workshop_id) || empty($label) || empty($field_type)) {
+                send_response('error', 'Data tidak lengkap (Label/Tipe wajib diisi).');
+            }
 
-        // Validasi
-        if (empty($workshop_id) || empty($label) || empty($field_type)) {
-            send_json_response('error', 'Semua field yang wajib diisi harus diisi.');
-        }
-
-        try {
-            // Query untuk menambah field baru
+            // 3. Query SQL (Ada 6 tanda tanya)
             $sql = "INSERT INTO form_fields (workshop_id, label, field_type, options, is_required, placeholder) VALUES (?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$workshop_id, $label, $field_type, $options, $is_required, $placeholder]);
-            send_json_response('success', 'Pertanyaan baru berhasil ditambahkan!');
-        } catch (PDOException $e) {
-            send_json_response('error', 'Database Error: ' . $e->getMessage());
-        }
-        break;
 
-    case 'edit':
-        // Ambil data dari POST
-        $field_id = $_POST['field_id'] ?? null;
-        $workshop_id = $_POST['workshop_id'] ?? null;
-        $label = trim($_POST['label'] ?? '');
-        $field_type = $_POST['field_type'] ?? '';
-        $options = trim($_POST['options'] ?? '');
-        $is_required = isset($_POST['is_required']) ? 1 : 0;
-        $placeholder = trim($_POST['placeholder'] ?? '');
+            // 4. Eksekusi (Harus ada 6 variabel)
+            $stmt->execute([
+                $workshop_id,
+                $label,
+                $field_type,
+                $options,
+                $is_required,
+                $placeholder
+            ]);
 
-        // Validasi
-        if (empty($field_id) || empty($workshop_id) || empty($label) || empty($field_type)) {
-            send_json_response('error', 'Data tidak lengkap untuk proses edit.');
-        }
+            send_response('success', 'Pertanyaan berhasil ditambahkan!');
+            break;
 
-        try {
-            // Query untuk update field
-            $sql = "UPDATE form_fields SET label=?, field_type=?, options=?, is_required=?, placeholder=? 
-                    WHERE id=? AND workshop_id IN (SELECT id FROM workshops WHERE penyelenggara_id=?)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$label, $field_type, $options, $is_required, $placeholder, $field_id, $penyelenggara_id]);
-            send_json_response('success', 'Pertanyaan berhasil diperbarui!');
-        } catch (PDOException $e) {
-            send_json_response('error', 'Database Error: ' . $e->getMessage());
-        }
-        break;
+        case 'edit':
+            // 1. Ambil Data
+            $id = $_POST['field_id'] ?? null;
+            $label = $_POST['label'] ?? null;
+            $field_type = $_POST['field_type'] ?? null;
+            $options = $_POST['options'] ?? '';
+            $is_required = isset($_POST['is_required']) ? 1 : 0;
+            $placeholder = $_POST['placeholder'] ?? '';
 
-    case 'hapus':
-        $field_id = $_POST['field_id'] ?? null;
-
-        if (empty($field_id)) {
-            send_json_response('error', 'ID field tidak ditemukan.');
-        }
-
-        try {
-            // Query untuk hapus field, dengan validasi kepemilikan
-            $sql = "DELETE FROM form_fields 
-                    WHERE id=? AND workshop_id IN (SELECT id FROM workshops WHERE penyelenggara_id=?)";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$field_id, $penyelenggara_id]);
-
-            if ($stmt->rowCount() > 0) {
-                send_json_response('success', 'Pertanyaan berhasil dihapus!');
-            } else {
-                send_json_response('error', 'Gagal menghapus, data tidak ditemukan atau Anda tidak memiliki izin.');
+            if (empty($id)) {
+                send_response('error', 'ID Field tidak ditemukan.');
             }
-        } catch (PDOException $e) {
-            send_json_response('error', 'Database Error: ' . $e->getMessage());
-        }
-        break;
 
-    default:
-        send_json_response('error', 'Aksi tidak dikenal.');
-        break;
+            // 2. Query SQL (Ada 6 tanda tanya: 5 data + 1 ID di WHERE)
+            $sql = "UPDATE form_fields SET label=?, field_type=?, options=?, is_required=?, placeholder=? WHERE id=?";
+            $stmt = $pdo->prepare($sql);
+
+            // 3. Eksekusi (Harus ada 6 variabel, urutan harus sama dengan SQL)
+            $stmt->execute([
+                $label,
+                $field_type,
+                $options,
+                $is_required,
+                $placeholder,
+                $id
+            ]);
+
+            send_response('success', 'Pertanyaan berhasil diperbarui!');
+            break;
+
+        case 'hapus':
+            $id = $_POST['field_id'] ?? null;
+
+            if (empty($id)) {
+                send_response('error', 'ID tidak valid.');
+            }
+
+            // Query SQL (Ada 1 tanda tanya)
+            $sql = "DELETE FROM form_fields WHERE id=?";
+            $stmt = $pdo->prepare($sql);
+
+            // Eksekusi (Harus ada 1 variabel)
+            $stmt->execute([$id]);
+
+            send_response('success', 'Pertanyaan berhasil dihapus!');
+            break;
+
+        default:
+            send_response('error', 'Aksi tidak valid: ' . htmlspecialchars($action));
+    }
+
+} catch (PDOException $e) {
+    // Tangkap error database dan kirim ke Javascript
+    send_response('error', 'Database Error: ' . $e->getMessage());
+} catch (Exception $e) {
+    send_response('error', 'System Error: ' . $e->getMessage());
 }
 ?>

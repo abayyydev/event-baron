@@ -54,7 +54,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['email'])) {
                     $_SESSION['penyelenggara_id_bersama'] = $id_bersama;
 
                     // 3. Foto Profil (MENIRU WA)
-                    $_SESSION['foto_profil'] = !empty($user['foto_profil']) ? $user['foto_profil'] : 'assets/img/admin.jpg';
+                    // 3. Foto Profil (PERBAIKAN PATH)
+                    if (!empty($user['foto_profil'])) {
+                        // Cek apakah di database sudah ada tulisan 'assets/' atau belum
+                        if (strpos($user['foto_profil'], 'assets/') !== false) {
+                            // Jika di database tersimpan path lengkap (misal: assets/uploads/profil/foto.jpg)
+                            $_SESSION['foto_profil'] = $user['foto_profil'];
+                        } else {
+                            // Jika di database HANYA nama file (misal: foto.jpg), tambahkan folder tujuannya
+                            // Sesuaikan folder ini dengan tempat Anda upload foto profil
+                            $_SESSION['foto_profil'] = 'assets/uploads/profil/' . $user['foto_profil'];
+                        }
+                    } else {
+                        // Foto Default jika user belum upload
+                        // Pastikan file ini BENAR-BENAR ADA di folder assets/img/
+                        $_SESSION['foto_profil'] = 'assets/img/download.jpg';
+                    }
                     // Perhatikan path 'assets/...' sesuaikan dengan lokasi file login.php Anda
 
                     // --- LOGIKA REDIRECT BERDASARKAN ROLE ---

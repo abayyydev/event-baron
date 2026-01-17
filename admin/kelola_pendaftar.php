@@ -73,241 +73,293 @@ try {
 }
 ?>
 
-<div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 mb-8">
-            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                <div class="flex-1">
-                    <div class="flex items-center space-x-3 mb-4">
-                        <div
-                            class="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl flex items-center justify-center">
-                            <i class="fas fa-users text-white text-lg"></i>
-                        </div>
-                        <div>
-                            <h1 class="text-2xl font-bold text-slate-800">Data Pendaftar</h1>
-                            <p class="text-slate-600">Kelola dan pantau peserta dari semua event Anda</p>
-                        </div>
-                    </div>
+<div class="min-h-screen bg-gray-50 font-sans pb-32">
+    
+    <!-- Hero Header Section -->
+    <div class="bg-emerald-900 pb-20 pt-10 px-4 rounded-b-[3rem] shadow-xl relative overflow-hidden">
+        <!-- Elemen Dekoratif Background -->
+        <div class="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-emerald-800 rounded-full opacity-50 blur-3xl"></div>
+        <div class="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-amber-500 rounded-full opacity-20 blur-2xl"></div>
 
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-slate-800"><?= $total_records ?></div>
-                            <div class="text-sm text-slate-600">Total Event</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-slate-800">
-                                <?= array_sum(array_column($events, 'jumlah_pendaftar')) ?>
-                            </div>
-                            <div class="text-sm text-slate-600">Total Pendaftar</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-slate-800">
-                                <?= array_sum(array_column($events, 'jumlah_hadir')) ?>
-                            </div>
-                            <div class="text-sm text-slate-600">Peserta Hadir</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-slate-800">
-                                <?= count(array_filter($events, function ($event) {
-                                    return strtotime($event['tanggal_waktu']) > time();
-                                })) ?>
-                            </div>
-                            <div class="text-sm text-slate-600">Event Aktif</div>
-                        </div>
-                    </div>
+        <div class="max-w-7xl mx-auto relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+                <div class="flex items-center gap-3 mb-3">
+                    <span class="text-emerald-200 text-xs font-bold uppercase tracking-widest border border-emerald-700/50 px-2 py-1 rounded-md">Manajemen Peserta</span>
                 </div>
+                <h1 class="text-3xl md:text-4xl font-extrabold text-white tracking-tight leading-tight">
+                    Data Pendaftar
+                </h1>
+                <p class="text-emerald-100/80 mt-2 text-sm md:text-base max-w-xl">
+                    Kelola dan pantau peserta dari semua event yang Anda selenggarakan.
+                </p>
+            </div>
+            
+            <!-- Quick Stats in Header -->
+            <div class="flex gap-3">
+                <div class="bg-white/10 backdrop-blur-md border border-white/10 rounded-xl p-3 flex flex-col items-center min-w-[100px]">
+                    <span class="text-2xl font-bold text-white"><?= $total_records ?></span>
+                    <span class="text-[10px] text-emerald-200 uppercase font-bold">Total Event</span>
+                </div>
+                <div class="bg-white/10 backdrop-blur-md border border-white/10 rounded-xl p-3 flex flex-col items-center min-w-[100px]">
+                    <span class="text-2xl font-bold text-amber-400"><?= array_sum(array_column($events, 'jumlah_pendaftar')) ?></span>
+                    <span class="text-[10px] text-emerald-200 uppercase font-bold">Pendaftar</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                <form method="GET" class="flex flex-col sm:flex-row gap-3">
-                    <div class="relative">
-                        <div class="relative rounded-xl shadow-sm">
-                            <input type="text" name="search" value="<?= htmlspecialchars($search) ?>"
-                                class="block w-full md:w-80 pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-300 transition-all duration-300 bg-white"
-                                placeholder="Cari event...">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-search text-slate-400"></i>
-                            </div>
-                            <?php if (!empty($search)): ?>
-                                <a href="?page=1"
-                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors">
-                                    <i class="fas fa-times"></i>
-                                </a>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <button type="submit"
-                        class="bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center">
-                        <i class="fas fa-search mr-2"></i> Cari
-                    </button>
-                </form>
+    <!-- Main Content Container (Naik ke atas menutupi header) -->
+    <div class="max-w-7xl mx-auto px-4 -mt-12 relative z-20">
+        
+        <!-- Search & Filter Card (Posisi Static) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 mb-8">
+            <div class="relative w-full">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-emerald-400"></i>
+                </div>
+                <input type="text" id="liveSearchInput" value="<?= htmlspecialchars($search) ?>"
+                    placeholder="Cari event berdasarkan judul atau deskripsi..."
+                    class="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border-transparent text-gray-900 placeholder-gray-400 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all duration-300 shadow-inner">
+                <div class="absolute inset-y-0 right-0 pr-4 flex items-center">
+                    <span id="loadingIcon" class="hidden text-amber-500 animate-spin">
+                        <i class="fas fa-circle-notch"></i>
+                    </span>
+                </div>
             </div>
         </div>
 
-        <div class="lg:hidden space-y-6">
-            <?php if (count($events) > 0): ?>
-                <?php foreach ($events as $event): ?>
-                    <div
-                        class="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 hover:shadow-xl transition-all duration-300">
-                        <div class="flex items-start space-x-4 mb-4">
-                            <?php if ($event['poster']): ?>
-                                <img src="../assets/img/posters/<?= htmlspecialchars($event['poster']) ?>" alt="Poster"
-                                    class="w-20 h-16 object-cover rounded-lg border border-slate-200 flex-shrink-0">
-                            <?php else: ?>
-                                <div
-                                    class="w-20 h-16 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200 flex-shrink-0">
-                                    <i class="fas fa-calendar text-slate-400 text-xl"></i>
-                                </div>
-                            <?php endif; ?>
-                            <div class="flex-1 min-w-0">
-                                <h3 class="text-lg font-semibold text-slate-800 mb-2"><?= htmlspecialchars($event['judul']) ?>
-                                </h3>
-                                <div class="space-y-2">
-                                    <div class="flex items-center text-sm text-slate-600">
-                                        <i
-                                            class="fas fa-calendar-alt mr-2 text-amber-500"></i><?= date('d M Y, H:i', strtotime($event['tanggal_waktu'])) ?>
-                                    </div>
-                                    <div class="flex items-center space-x-4 text-sm">
-                                        <span class="flex items-center text-slate-600"><i
-                                                class="fas fa-users mr-1 text-blue-500"></i><?= $event['jumlah_pendaftar'] ?>
-                                            Pendaftar</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+        <!-- Container Data (Target Live Update) -->
+        <div id="dataContainer">
+            
+            <!-- Desktop View (Table) -->
+            <div class="hidden lg:block bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-emerald-900 text-white text-sm uppercase tracking-wider">
+                            <th class="px-6 py-5 font-semibold">Event</th>
+                            <th class="px-6 py-5 font-semibold">Jadwal</th>
+                            <th class="px-6 py-5 font-semibold text-center">Statistik Peserta</th>
+                            <th class="px-6 py-5 font-semibold text-center">Status</th>
+                            <th class="px-6 py-5 font-semibold text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <?php if (count($events) > 0): ?>
+                            <?php foreach ($events as $event): ?>
+                                <tr class="hover:bg-emerald-50/40 transition-colors duration-200 group">
+                                    <!-- Kolom Event -->
+                                    <td class="px-6 py-5">
+                                        <div class="flex gap-4 items-center">
+                                            <div class="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg shadow-md border border-gray-200 group-hover:shadow-lg transition-all">
+                                                <?php if ($event['poster']): ?>
+                                                    <img src="../assets/img/posters/<?= htmlspecialchars($event['poster']) ?>"
+                                                        class="h-full w-full object-cover transform group-hover:scale-105 transition-transform duration-500">
+                                                <?php else: ?>
+                                                    <div class="h-full w-full bg-gray-100 flex items-center justify-center text-gray-400">
+                                                        <i class="fas fa-image text-xl"></i>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <h3 class="font-bold text-gray-800 text-base mb-1 group-hover:text-emerald-700 transition-colors truncate max-w-xs">
+                                                    <?= htmlspecialchars($event['judul']) ?>
+                                                </h3>
+                                                <div class="flex items-center text-xs text-gray-500">
+                                                    <i class="fas fa-map-marker-alt text-emerald-500 mr-1"></i>
+                                                    <span class="truncate max-w-[200px]"><?= htmlspecialchars($event['lokasi']) ?></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
 
-                        <div class="flex flex-col gap-2 pt-4 border-t border-slate-200">
-                            <a href="lihat_detail_pendaftar?event_id=<?= $event['id'] ?>"
-                                class="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold py-2 px-6 rounded-xl text-center">
-                                <i class="fas fa-eye mr-2"></i> Lihat Detail
-                            </a>
-                            <button
-                                onclick="openModalPeserta(<?= $event['id'] ?>, '<?= htmlspecialchars($event['judul'], ENT_QUOTES) ?>')"
-                                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-md transition flex items-center justify-center gap-2">
-                                <i class="fas fa-user-plus"></i> Tambah Santri Internal
-                            </button>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </div>
+                                    <!-- Kolom Jadwal -->
+                                    <td class="px-6 py-5">
+                                        <div class="flex flex-col gap-1">
+                                            <div class="flex items-center text-sm text-gray-700 font-medium">
+                                                <i class="far fa-calendar-alt w-5 text-amber-500"></i>
+                                                <?= date('d M Y', strtotime($event['tanggal_waktu'])) ?>
+                                            </div>
+                                            <div class="flex items-center text-xs text-gray-500 ml-5">
+                                                <?= date('H:i', strtotime($event['tanggal_waktu'])) ?> WIB
+                                            </div>
+                                        </div>
+                                    </td>
 
-        <div class="hidden lg:block bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-            <div class="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-6 py-4">
-                <div class="grid grid-cols-12 gap-4 items-center">
-                    <div class="col-span-4"><span class="font-semibold">Event</span></div>
-                    <div class="col-span-2"><span class="font-semibold">Tanggal</span></div>
-                    <div class="col-span-2 text-center"><span class="font-semibold">Pendaftar</span></div>
-                    <div class="col-span-2 text-center"><span class="font-semibold">Kehadiran</span></div>
-                    <div class="col-span-2 text-center"><span class="font-semibold">Aksi</span></div>
-                </div>
+                                    <!-- Kolom Statistik -->
+                                    <td class="px-6 py-5 text-center">
+                                        <div class="flex justify-center gap-6">
+                                            <div class="text-center">
+                                                <span class="block text-lg font-bold text-gray-800"><?= $event['jumlah_pendaftar'] ?></span>
+                                                <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wide">Pendaftar</span>
+                                            </div>
+                                            <div class="text-center">
+                                                <span class="block text-lg font-bold text-emerald-600"><?= $event['jumlah_hadir'] ?></span>
+                                                <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wide">Hadir</span>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Kolom Status (Aktif/Selesai) -->
+                                    <td class="px-6 py-5 text-center">
+                                        <?php 
+                                        $is_active = strtotime($event['tanggal_waktu']) > time();
+                                        ?>
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
+                                            <?= $is_active 
+                                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                                : 'bg-gray-100 text-gray-600 border border-gray-200' ?>">
+                                            <?= $is_active ? 'Akan Datang' : 'Selesai' ?>
+                                        </span>
+                                    </td>
+
+                                    <!-- Kolom Aksi -->
+                                    <td class="px-6 py-5 text-center">
+                                        <div class="flex items-center justify-center gap-2">
+                                            <a href="lihat_detail_pendaftar?event_id=<?= $event['id'] ?>" 
+                                               class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center hover:bg-amber-200 transition-colors" title="Lihat Detail">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <button onclick="openModalPeserta(<?= $event['id'] ?>, '<?= htmlspecialchars($event['judul'], ENT_QUOTES) ?>')"
+                                                class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-200 transition-colors" title="Tambah Peserta">
+                                                <i class="fas fa-user-plus"></i>
+                                            </button>
+                                            <?php if ($event['jumlah_pendaftar'] > 0): ?>
+                                                <a href="export_pendaftar.php?event_id=<?= $event['id'] ?>" 
+                                                   class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-200 transition-colors" title="Export Excel">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="5" class="px-6 py-16 text-center">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <div class="bg-emerald-50 p-4 rounded-full mb-3">
+                                            <i class="fas fa-search text-3xl text-emerald-300"></i>
+                                        </div>
+                                        <h3 class="text-lg font-medium text-gray-900">Tidak ada event ditemukan</h3>
+                                        <p class="text-gray-500 text-sm mt-1">Coba ubah kata kunci pencarian Anda.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
 
-            <div class="divide-y divide-slate-200">
+            <!-- Mobile View (Modern Cards) -->
+            <div class="lg:hidden grid grid-cols-1 gap-6">
                 <?php if (count($events) > 0): ?>
                     <?php foreach ($events as $event): ?>
-                        <div class="px-6 py-4 hover:bg-slate-50/50 transition-colors group">
-                            <div class="grid grid-cols-12 gap-4 items-center">
-                                <div class="col-span-4">
-                                    <div class="flex items-center space-x-4">
-                                        <?php if ($event['poster']): ?>
-                                            <img src="../assets/img/posters/<?= htmlspecialchars($event['poster']) ?>" alt="Poster"
-                                                class="w-16 h-12 object-cover rounded-lg border border-slate-200">
-                                        <?php else: ?>
-                                            <div
-                                                class="w-16 h-12 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200">
-                                                <i class="fas fa-calendar text-slate-400"></i>
-                                            </div>
-                                        <?php endif; ?>
-                                        <div class="min-w-0 flex-1">
-                                            <h4
-                                                class="font-semibold text-slate-800 group-hover:text-amber-600 transition-colors truncate">
-                                                <?= htmlspecialchars($event['judul']) ?>
-                                            </h4>
-                                            <p class="text-sm text-slate-500 truncate"><?= htmlspecialchars($event['lokasi']) ?>
-                                            </p>
-                                        </div>
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden relative">
+                            <!-- Header Card -->
+                            <div class="relative h-32 bg-gray-200">
+                                <?php if ($event['poster']): ?>
+                                    <img src="../assets/img/posters/<?= htmlspecialchars($event['poster']) ?>" 
+                                         class="w-full h-full object-cover opacity-90">
+                                <?php else: ?>
+                                    <div class="w-full h-full bg-emerald-900 flex items-center justify-center">
+                                        <i class="fas fa-image text-4xl text-emerald-700"></i>
+                                    </div>
+                                <?php endif; ?>
+                                <!-- Overlay Gradient -->
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                                
+                                <div class="absolute bottom-3 left-4 right-4 text-white">
+                                    <h3 class="font-bold text-lg leading-tight truncate">
+                                        <?= htmlspecialchars($event['judul']) ?>
+                                    </h3>
+                                    <p class="text-xs opacity-90 flex items-center gap-1 mt-1">
+                                        <i class="fas fa-map-marker-alt text-amber-400"></i> <?= htmlspecialchars($event['lokasi']) ?>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Content -->
+                            <div class="p-5">
+                                <div class="flex justify-between items-center mb-4">
+                                    <div class="flex items-center text-sm text-gray-600">
+                                        <i class="far fa-calendar text-emerald-500 w-6"></i>
+                                        <span><?= date('d M Y, H:i', strtotime($event['tanggal_waktu'])) ?></span>
+                                    </div>
+                                    <?php $is_active = strtotime($event['tanggal_waktu']) > time(); ?>
+                                    <span class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide <?= $is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600' ?>">
+                                        <?= $is_active ? 'Aktif' : 'Selesai' ?>
+                                    </span>
+                                </div>
+
+                                <!-- Stats Grid -->
+                                <div class="grid grid-cols-2 gap-3 mb-5">
+                                    <div class="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+                                        <span class="block text-xl font-bold text-gray-800"><?= $event['jumlah_pendaftar'] ?></span>
+                                        <span class="text-[10px] text-gray-500 uppercase font-bold">Pendaftar</span>
+                                    </div>
+                                    <div class="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100">
+                                        <span class="block text-xl font-bold text-emerald-600"><?= $event['jumlah_hadir'] ?></span>
+                                        <span class="text-[10px] text-emerald-600 uppercase font-bold">Hadir</span>
                                     </div>
                                 </div>
 
-                                <div class="col-span-2">
-                                    <div class="text-sm text-slate-700">
-                                        <div class="font-medium"><?= date('d M Y', strtotime($event['tanggal_waktu'])) ?></div>
-                                        <div class="text-slate-500"><?= date('H:i', strtotime($event['tanggal_waktu'])) ?> WIB
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="col-span-2 text-center">
-                                    <div class="flex flex-col items-center">
-                                        <span
-                                            class="text-lg font-semibold text-slate-800"><?= $event['jumlah_pendaftar'] ?></span>
-                                        <span class="text-xs text-slate-500">Pendaftar</span>
-                                    </div>
-                                </div>
-
-                                <div class="col-span-2 text-center">
-                                    <div class="flex flex-col items-center">
-                                        <span
-                                            class="text-lg font-semibold text-emerald-600"><?= $event['jumlah_hadir'] ?></span>
-                                    </div>
-                                </div>
-
-                                <div class="col-span-2">
-                                    <div class="flex items-center justify-center space-x-2">
-                                        <a href="lihat_detail_pendaftar?event_id=<?= $event['id'] ?>"
-                                            class="w-12 h-12 bg-amber-500 hover:bg-amber-600 text-white rounded-xl flex items-center justify-center transition-all duration-300 shadow-md"
-                                            title="Lihat Detail">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <?php if ($event['jumlah_pendaftar'] > 0): ?>
-                                            <a href="export_pendaftar.php?event_id=<?= $event['id'] ?>"
-                                                class="w-12 h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center justify-center transition-all duration-300 shadow-md"
-                                                title="Export">
-                                                <i class="fas fa-download"></i>
-                                            </a>
-                                        <?php endif; ?>
-                                        <button
-                                            onclick="openModalPeserta(<?= $event['id'] ?>, '<?= htmlspecialchars($event['judul'], ENT_QUOTES) ?>')"
-                                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-lg shadow-md transition flex items-center gap-2 text-sm"
-                                            title="Tambah Peserta">
-                                            <i class="fas fa-user-plus"></i> <span class="hidden xl:inline"></span>
-                                        </button>
-                                    </div>
+                                <!-- Action Buttons -->
+                                <div class="grid grid-cols-3 gap-2">
+                                    <a href="lihat_detail_pendaftar?event_id=<?= $event['id'] ?>" 
+                                       class="col-span-1 bg-amber-50 hover:bg-amber-100 text-amber-700 py-2.5 rounded-lg text-center text-sm font-bold transition-colors flex flex-col items-center justify-center gap-1">
+                                        <i class="fas fa-eye"></i> Detail
+                                    </a>
+                                    <button onclick="openModalPeserta(<?= $event['id'] ?>, '<?= htmlspecialchars($event['judul'], ENT_QUOTES) ?>')"
+                                        class="col-span-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-center text-sm font-bold transition-colors flex items-center justify-center gap-2 shadow-md shadow-blue-200">
+                                        <i class="fas fa-user-plus"></i> Tambah Peserta
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 <?php else: ?>
-                    <div class="px-6 py-12 text-center">
-                        <div class="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-calendar-times text-slate-400 text-3xl"></i>
-                        </div>
-                        <h3 class="text-lg font-semibold text-slate-600 mb-2">Tidak Ada Event Ditemukan</h3>
+                    <div class="text-center p-8 bg-white rounded-xl shadow-sm border border-gray-100">
+                        <p class="text-gray-500">Tidak ada event ditemukan.</p>
                     </div>
                 <?php endif; ?>
             </div>
-        </div>
 
-        <?php if ($total_pages > 1): ?>
-            <div class="mt-8">
-            </div>
-        <?php endif; ?>
+            <!-- Pagination -->
+            <?php if ($total_pages > 1): ?>
+                <div class="flex justify-center mt-10 pb-8">
+                    <nav class="flex gap-2 p-2 bg-white rounded-xl shadow-sm border border-gray-100">
+                        <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                            <a href="?page=<?= $i ?>&search=<?= urlencode($search) ?>"
+                                class="w-10 h-10 flex items-center justify-center rounded-lg text-sm font-bold transition-all duration-300
+                                <?= $i == $page 
+                                    ? 'bg-gradient-to-br from-emerald-500 to-emerald-700 text-white shadow-md transform scale-105' 
+                                    : 'text-gray-500 hover:bg-emerald-50 hover:text-emerald-600' ?>">
+                                <?= $i ?>
+                            </a>
+                        <?php endfor; ?>
+                    </nav>
+                </div>
+            <?php endif; ?>
+
+        </div> <!-- End Data Container -->
+
     </div>
 </div>
 
+<!-- Modal Pilih Peserta (Modernized) -->
 <div id="modalPilihPeserta"
-    class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300">
-    <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh] animate-fade-in-up">
+    class="fixed inset-0 z-[60] hidden bg-emerald-900/40 backdrop-blur-sm flex items-center justify-center p-4 transition-all duration-300">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh] transform scale-95 opacity-0 transition-all duration-300" id="modalPesertaContent">
 
-        <div
-            class="p-5 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-            <div>
-                <h3 class="text-lg font-bold" id="modalTitle">Pilih Santri</h3>
-                <p class="text-sm text-blue-100 opacity-90">Centang santri untuk ditambahkan ke event ini.</p>
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-emerald-900 text-white relative overflow-hidden">
+            <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-amber-400 rounded-full opacity-20 blur-xl"></div>
+            <div class="relative z-10">
+                <h3 class="text-xl font-bold" id="modalTitle">Pilih Santri</h3>
+                <p class="text-sm text-emerald-200">Centang santri untuk ditambahkan ke event ini.</p>
             </div>
             <button onclick="closeModalPeserta()"
-                class="text-white/70 hover:text-white hover:bg-white/20 rounded-full p-2 transition">
-                <i class="fas fa-times text-xl"></i>
+                class="relative z-10 text-white/70 hover:text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
+                <i class="fas fa-times text-lg"></i>
             </button>
         </div>
 
@@ -318,49 +370,50 @@ try {
 
                 <div class="p-4 border-b border-gray-100 bg-gray-50">
                     <div class="relative">
-                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                        <i class="fas fa-search absolute left-4 top-3.5 text-gray-400"></i>
                         <input type="text" id="searchSantri" onkeyup="filterSantri()"
                             placeholder="Cari nama atau email santri..."
-                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                            class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition bg-white shadow-sm">
                     </div>
                 </div>
 
-                <div class="flex-1 overflow-y-auto custom-scrollbar">
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-0">
                     <table class="w-full text-left border-collapse">
-                        <thead class="bg-gray-100 text-gray-600 text-xs uppercase sticky top-0 z-10">
+                        <thead class="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th class="p-4 w-12 text-center border-b">
+                                <th class="p-4 w-12 text-center border-b border-gray-100">
                                     <input type="checkbox" id="checkAll"
-                                        class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                                        class="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer transition-all">
                                 </th>
-                                <th class="p-4 border-b">Nama Santri</th>
-                                <th class="p-4 border-b">Kontak</th>
-                                <th class="p-4 border-b text-center">JK</th>
+                                <th class="p-4 border-b border-gray-100">Nama Santri</th>
+                                <th class="p-4 border-b border-gray-100">Kontak</th>
+                                <th class="p-4 border-b border-gray-100 text-center">JK</th>
                             </tr>
                         </thead>
                         <tbody id="listSantriBody" class="divide-y divide-gray-50">
+                            <!-- Data will be loaded here -->
                         </tbody>
                     </table>
 
-                    <div id="loadingIndicator" class="hidden flex flex-col items-center justify-center py-10">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                        <span class="text-gray-500 text-sm">Memuat data santri...</span>
+                    <div id="loadingIndicator" class="hidden flex flex-col items-center justify-center py-16">
+                        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600 mb-3"></div>
+                        <span class="text-gray-500 text-sm font-medium">Memuat data santri...</span>
                     </div>
                 </div>
 
-                <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center z-20">
-                    <span class="text-sm font-medium text-blue-700 bg-blue-50 px-3 py-1 rounded-full"
+                <div class="p-5 border-t border-gray-100 bg-white flex justify-between items-center z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                    <span class="text-sm font-bold text-emerald-700 bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-100"
                         id="selectedCount">
                         0 terpilih
                     </span>
                     <div class="flex gap-3">
                         <button type="button" onclick="closeModalPeserta()"
-                            class="px-5 py-2.5 text-gray-600 hover:bg-gray-200 rounded-lg transition text-sm font-medium">
+                            class="px-5 py-2.5 text-gray-600 hover:bg-gray-100 rounded-xl transition text-sm font-bold border border-gray-200">
                             Batal
                         </button>
                         <button type="submit" id="btnSimpan" disabled
-                            class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5 text-sm">
-                            <i class="fas fa-save mr-2"></i> Simpan Peserta
+                            class="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg hover:shadow-emerald-500/30 transition-all transform hover:-translate-y-0.5 text-sm flex items-center gap-2">
+                            <i class="fas fa-save"></i> Simpan Peserta
                         </button>
                     </div>
                 </div>
@@ -370,7 +423,9 @@ try {
 </div>
 
 <script>
+    // --- 1. Logic Modal & AJAX ---
     const modal = document.getElementById('modalPilihPeserta');
+    const modalContent = document.getElementById('modalPesertaContent');
     const listBody = document.getElementById('listSantriBody');
     const loading = document.getElementById('loadingIndicator');
     const inputId = document.getElementById('inputWorkshopId');
@@ -378,21 +433,23 @@ try {
     const selectedCountLabel = document.getElementById('selectedCount');
     const btnSimpan = document.getElementById('btnSimpan');
 
-    // Fungsi Utama: Membuka Modal & Load Data
     function openModalPeserta(workshopId, judulEvent) {
-        // 1. Reset UI
         modal.classList.remove('hidden');
+        // Animation
+        setTimeout(() => {
+            modalContent.classList.remove('scale-95', 'opacity-0');
+            modalContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+
         document.body.style.overflow = 'hidden';
         inputId.value = workshopId;
-        titleLabel.innerHTML = `Tambah Peserta: <span class="font-normal opacity-90 text-sm block mt-1">${judulEvent}</span>`;
+        titleLabel.innerHTML = `Tambah Peserta: <span class="text-amber-300 font-normal text-base block mt-0.5">${judulEvent}</span>`;
         listBody.innerHTML = '';
         document.getElementById('checkAll').checked = false;
         updateCount();
 
-        // 2. Tampilkan Loading
         loading.classList.remove('hidden');
 
-        // 3. Fetch Data via AJAX
         fetch(`ajax_get_calon_peserta.php?event_id=${workshopId}`)
             .then(response => response.text())
             .then(html => {
@@ -401,31 +458,32 @@ try {
             })
             .catch(err => {
                 loading.classList.add('hidden');
-                listBody.innerHTML = '<tr><td colspan="4" class="text-center text-red-500 p-4">Gagal memuat data. Periksa koneksi.</td></tr>';
+                listBody.innerHTML = '<tr><td colspan="4" class="text-center text-red-500 p-8 font-medium">Gagal memuat data. Periksa koneksi internet Anda.</td></tr>';
                 console.error(err);
             });
     }
 
     function closeModalPeserta() {
-        modal.classList.add('hidden');
-        document.body.style.overflow = 'auto';
+        modalContent.classList.remove('scale-100', 'opacity-100');
+        modalContent.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }, 300);
     }
 
-    // UX: Klik baris untuk mencentang
     function toggleRow(row) {
         const checkbox = row.querySelector('.santri-checkbox');
         checkbox.checked = !checkbox.checked;
 
-        // Efek visual seleksi
         if (checkbox.checked) {
-            row.classList.add('bg-blue-50');
+            row.classList.add('bg-emerald-50/50');
         } else {
-            row.classList.remove('bg-blue-50');
+            row.classList.remove('bg-emerald-50/50');
         }
         updateCount();
     }
 
-    // Check All Feature
     document.getElementById('checkAll').addEventListener('change', function () {
         const isChecked = this.checked;
         const visibleCheckboxes = document.querySelectorAll('#listSantriBody tr:not([style*="display: none"]) .santri-checkbox');
@@ -433,27 +491,25 @@ try {
         visibleCheckboxes.forEach(box => {
             box.checked = isChecked;
             const row = box.closest('tr');
-            if (isChecked) row.classList.add('bg-blue-50');
-            else row.classList.remove('bg-blue-50');
+            if (isChecked) row.classList.add('bg-emerald-50/50');
+            else row.classList.remove('bg-emerald-50/50');
         });
         updateCount();
     });
 
-    // Update Counter & Enable Tombol Simpan
     function updateCount() {
         const count = document.querySelectorAll('.santri-checkbox:checked').length;
-        selectedCountLabel.innerText = count + " santri terpilih";
+        selectedCountLabel.innerText = count + " terpilih";
 
         if (count > 0) {
             btnSimpan.disabled = false;
-            btnSimpan.classList.remove('opacity-50');
+            btnSimpan.classList.remove('opacity-50', 'cursor-not-allowed');
         } else {
             btnSimpan.disabled = true;
-            btnSimpan.classList.add('opacity-50');
+            btnSimpan.classList.add('opacity-50', 'cursor-not-allowed');
         }
     }
 
-    // Filter Pencarian di Client Side
     function filterSantri() {
         const input = document.getElementById('searchSantri').value.toLowerCase();
         const rows = document.querySelectorAll('#listSantriBody tr');
@@ -471,47 +527,66 @@ try {
         });
     }
 
-    // Tutup modal jika klik di luar area
     modal.addEventListener('click', function (e) {
         if (e.target === modal) {
             closeModalPeserta();
         }
     });
+
+    // --- 2. Live Search Logic (Sama seperti kelola_event.php) ---
+    const searchInput = document.getElementById('liveSearchInput');
+    const loadingIcon = document.getElementById('loadingIcon');
+    const dataContainer = document.getElementById('dataContainer');
+    let timeout = null;
+
+    if(searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(timeout);
+            const query = this.value;
+            loadingIcon.classList.remove('hidden');
+
+            timeout = setTimeout(() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('search', query);
+                url.searchParams.set('page', 1);
+
+                fetch(url)
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const newContent = doc.getElementById('dataContainer').innerHTML;
+                        
+                        dataContainer.style.opacity = '0.5';
+                        setTimeout(() => {
+                            dataContainer.innerHTML = newContent;
+                            dataContainer.style.opacity = '1';
+                            loadingIcon.classList.add('hidden');
+                            window.history.pushState({}, '', url);
+                        }, 200);
+                    })
+                    .catch(err => {
+                        console.error('Error fetching data:', err);
+                        loadingIcon.classList.add('hidden');
+                    });
+            }, 500);
+        });
+    }
 </script>
 
 <style>
-    /* Custom Scrollbar untuk Modal */
     .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
     }
-
     .custom-scrollbar::-webkit-scrollbar-track {
         background: #f1f1f1;
     }
-
     .custom-scrollbar::-webkit-scrollbar-thumb {
         background: #cbd5e1;
         border-radius: 4px;
     }
-
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .animate-fade-in-up {
-        animation: fadeInUp 0.3s ease-out;
     }
 </style>
 
