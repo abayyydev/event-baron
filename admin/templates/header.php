@@ -371,22 +371,11 @@ $current_page = $current_page ?? basename($_SERVER['PHP_SELF'], ".php");
                         <h1 class="text-xl font-bold text-slate-900 leading-tight gradient-text">
                             <?= isset($page_title) ? htmlspecialchars($page_title) : 'Dashboard' ?>
                         </h1>
-                        <p class="text-sm text-slate-500 mt-0.5">Panel Kontrol Penyelenggara</p>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-4">
                     <!-- Notification Bell -->
-                    <div class="relative">
-                        <button
-                            class="relative p-2.5 rounded-xl text-slate-500 hover:text-gold-600 hover:bg-gold-50 transition-all duration-200 group">
-                            <i class="far fa-bell text-xl"></i>
-                            <span
-                                class="absolute top-2 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
-                            <span
-                                class="absolute -top-1 -right-1 w-5 h-5 bg-gold-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center border border-white shadow-sm">3</span>
-                        </button>
-                    </div>
 
                     <div class="h-10 w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent"></div>
 

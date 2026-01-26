@@ -1,4 +1,6 @@
 <?php
+// user/isi_kuesioner.php
+
 session_start();
 require_once __DIR__ . '/../core/koneksi.php';
 
@@ -8,13 +10,13 @@ $current_page = "dashboard";
 // Gunakan template header agar style konsisten
 require_once 'templates/header.php';
 
-if (!isset($_SESSION['user_id']) || !isset($_GET['id'])) {
+if (!isset($_SESSION['santri_id']) || !isset($_GET['id'])) {
     echo "<script>window.location='dashboard.php';</script>";
     exit;
 }
 
 $workshop_id = $_GET['id'];
-$user_id = $_SESSION['user_id'];
+$santri_id = $_SESSION['santri_id'];
 
 // 1. Cek Event
 $stmt = $pdo->prepare("SELECT * FROM workshops WHERE id = ?");
@@ -27,10 +29,10 @@ if (!$event) {
 }
 
 // 2. Cek Apakah Sudah Pernah Mengisi? (Mencegah Double Submit)
-$stmt_check = $pdo->prepare("SELECT COUNT(*) FROM workshop_answers WHERE workshop_id = ? AND user_id = ?");
-$stmt_check->execute([$workshop_id, $user_id]);
+// Perhatikan nama tabel: workshop_answers dan kolom: santri_id
+$stmt_check = $pdo->prepare("SELECT COUNT(*) FROM workshop_answers WHERE workshop_id = ? AND santri_id = ?");
+$stmt_check->execute([$workshop_id, $santri_id]);
 if ($stmt_check->fetchColumn() > 0) {
-    // FIX: Load library SweetAlert sebelum script dijalankan
     echo "
     <script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
     <script>
@@ -41,10 +43,13 @@ if ($stmt_check->fetchColumn() > 0) {
                 icon: 'info',
                 confirmButtonColor: '#10b981'
             }).then(() => {
-                window.location = 'dashboard.php';
+                window.location = 'sertifikat.php';
             });
         });
     </script>";
+    // Tetap tampilkan footer agar layout tidak rusak jika JS dimatikan
+    echo "</div>";
+    require_once 'templates/footer.php';
     exit;
 }
 
@@ -64,12 +69,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (is_array($ans_text))
                 $ans_text = implode(', ', $ans_text);
 
-            $sql = "INSERT INTO workshop_answers (workshop_id, user_id, question_id, answer_text) VALUES (?, ?, ?, ?)";
-            $pdo->prepare($sql)->execute([$workshop_id, $user_id, $q_id, $ans_text]);
+            // Simpan ke workshop_answers
+            $sql = "INSERT INTO workshop_answers (workshop_id, santri_id, question_id, answer_text) VALUES (?, ?, ?, ?)";
+            $pdo->prepare($sql)->execute([$workshop_id, $santri_id, $q_id, $ans_text]);
         }
 
         $pdo->commit();
-        // FIX: Load library SweetAlert sebelum script dijalankan
         echo "<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
@@ -80,13 +85,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     timer: 3000,
                     showConfirmButton: false
                 }).then(() => {
-                    window.location='dashboard.php';
+                    window.location='sertifikat.php';
                 });
             });
         </script>";
     } catch (Exception $e) {
         $pdo->rollBack();
-        // FIX: Load library SweetAlert untuk error handling juga
         echo "<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
@@ -112,7 +116,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .rating-group label {
         font-size: 2.5rem;
         color: #e2e8f0;
-        /* Slate-200 */
         cursor: pointer;
         transition: color 0.2s, transform 0.1s;
     }
@@ -122,7 +125,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .rating-group label:hover,
     .rating-group label:hover~label {
         color: #fbbf24;
-        /* Amber-400 */
         filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.5));
     }
 
@@ -133,9 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="min-h-screen bg-gray-50 font-sans pb-20">
 
-    <!-- Hero Section -->
     <div class="bg-emerald-900 pb-24 pt-10 px-4 rounded-b-[3rem] shadow-xl relative overflow-hidden">
-        <!-- Dekorasi Background -->
         <div class="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-emerald-800 rounded-full opacity-50 blur-3xl">
         </div>
         <div class="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-amber-500 rounded-full opacity-20 blur-2xl">
@@ -156,7 +156,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
-    <!-- Main Content Container -->
     <div class="max-w-3xl mx-auto px-4 -mt-16 relative z-20">
 
         <form method="POST" class="space-y-6">
@@ -165,7 +164,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php foreach ($questions as $index => $q): ?>
                     <div
                         class="bg-white rounded-3xl shadow-lg border border-gray-100 p-6 md:p-8 relative group hover:shadow-xl transition-all duration-300">
-                        <!-- Number Badge -->
                         <div
                             class="absolute -left-3 -top-3 w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center font-bold shadow-lg border-4 border-gray-50 z-10">
                             <?= $index + 1 ?>
@@ -176,19 +174,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <span class="text-red-500 text-sm align-top">*</span>
                         </label>
 
-                        <!-- Tipe: TEXT -->
                         <?php if ($q['question_type'] === 'text'): ?>
                             <input type="text" name="answer[<?= $q['id'] ?>]" required
                                 class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                                 placeholder="Tulis jawaban singkat Anda...">
 
-                            <!-- Tipe: TEXTAREA -->
                         <?php elseif ($q['question_type'] === 'textarea'): ?>
                             <textarea name="answer[<?= $q['id'] ?>]" rows="4" required
                                 class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none resize-none"
                                 placeholder="Ceritakan pendapat Anda secara detail..."></textarea>
 
-                            <!-- Tipe: RATING -->
                         <?php elseif ($q['question_type'] === 'rating'): ?>
                             <div
                                 class="flex flex-col items-center justify-center py-4 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
@@ -208,7 +203,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </div>
                             </div>
 
-                            <!-- Tipe: RADIO -->
                         <?php elseif ($q['question_type'] === 'radio'):
                             $opts = explode(',', $q['options']); ?>
                             <div class="space-y-3">
@@ -232,7 +226,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <?php endforeach; ?>
                             </div>
 
-                            <!-- Tipe: DROPDOWN -->
                         <?php elseif ($q['question_type'] === 'dropdown'):
                             $opts = explode(',', $q['options']); ?>
                             <div class="relative">
@@ -252,9 +245,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 <?php endforeach; ?>
 
-                <!-- Actions -->
                 <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
-                    <a href="dashboard.php"
+                    <a href="sertifikat.php"
                         class="w-full sm:w-auto px-6 py-3 rounded-xl border border-gray-300 text-gray-600 font-bold hover:bg-gray-50 transition text-center">
                         Batal
                     </a>
@@ -271,9 +263,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <h3 class="text-xl font-bold text-gray-800">Kuesioner Belum Tersedia</h3>
                     <p class="text-gray-500 mt-2 mb-6">Penyelenggara belum membuat pertanyaan untuk event ini.</p>
-                    <a href="dashboard.php"
+                    <a href="sertifikat.php"
                         class="inline-block px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition">
-                        Kembali ke Dashboard
+                        Kembali
                     </a>
                 </div>
             <?php endif; ?>
@@ -287,7 +279,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 </div>
 
-<!-- SweetAlert2 (Sudah include di header biasanya, tapi jaga-jaga) -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <?php require_once 'templates/footer.php'; ?>

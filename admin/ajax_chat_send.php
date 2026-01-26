@@ -1,13 +1,15 @@
 <?php
+// admin/ajax_chat_send.php
+
 session_start();
 require_once __DIR__ . '/../core/koneksi.php';
 
-// Set header JSON agar respon dikenali JavaScript
+// Set header JSON
 header('Content-Type: application/json');
 
-// 1. Cek Sesi Login
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Sesi habis, silakan login ulang.']);
+// 1. Cek Sesi Login (Harus Penyelenggara/Admin)
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'penyelenggara') {
+    echo json_encode(['status' => 'error', 'message' => 'Unauthorized access.']);
     exit;
 }
 
@@ -15,7 +17,6 @@ $user_id = $_SESSION['user_id'];
 
 // 2. Cek Method POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Ambil data
     $ws_id = $_POST['workshop_id'] ?? 0;
     $pesan = trim($_POST['pesan'] ?? '');
 
@@ -27,17 +28,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         // 3. Simpan ke Database
-        $stmt_chat = $pdo->prepare("INSERT INTO workshop_discussions (workshop_id, user_id, message) VALUES (?, ?, ?)");
+        // PENTING: Tambahkan user_type = 'admin'
+        $stmt_chat = $pdo->prepare("INSERT INTO workshop_discussions (workshop_id, user_id, user_type, message) VALUES (?, ?, 'admin', ?)");
         $stmt_chat->execute([$ws_id, $user_id, $pesan]);
 
         // 4. Berhasil
         echo json_encode([
             'status' => 'success',
-            'timestamp' => date('H:i'), // Kirim waktu server untuk update UI
+            'timestamp' => date('H:i'), // Kirim waktu server
             'message' => 'Pesan terkirim'
         ]);
     } catch (PDOException $e) {
-        // Gagal Database
         echo json_encode(['status' => 'error', 'message' => 'DB Error: ' . $e->getMessage()]);
     }
 } else {

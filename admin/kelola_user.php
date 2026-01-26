@@ -1,8 +1,10 @@
 <?php
+// admin/kelola_user.php
+
 if (!defined('BASE_PATH')) {
     define('BASE_PATH', dirname(__DIR__));
 }
-$page_title = 'Kelola User Peserta';
+$page_title = 'Data Santri';
 $current_page = 'kelola_user';
 
 require_once BASE_PATH . '/admin/templates/header.php';
@@ -14,37 +16,39 @@ $limit = 10;
 $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
-// Filter: Hanya ambil role 'peserta'
-$whereClause = "WHERE role = 'peserta'";
+// Filter Pencarian
+$whereClause = "WHERE 1=1";
 $params = [];
 
 if (!empty($search)) {
-    $whereClause .= " AND (nama_lengkap LIKE ? OR email LIKE ? OR no_whatsapp LIKE ?)";
+    $whereClause .= " AND (nama_lengkap LIKE ? OR nis LIKE ? OR kelas LIKE ? OR email LIKE ?)";
+    $params[] = "%$search%";
     $params[] = "%$search%";
     $params[] = "%$search%";
     $params[] = "%$search%";
 }
 
 // Hitung Total Data
-$countStmt = $pdo->prepare("SELECT COUNT(*) FROM users $whereClause");
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM santri $whereClause");
 $countStmt->execute($params);
 $total_records = $countStmt->fetchColumn();
 $total_pages = ceil($total_records / $limit);
 
-// Ambil Data User
-$sql = "SELECT * FROM users $whereClause ORDER BY created_at DESC LIMIT $limit OFFSET $offset";
+// Ambil Data Santri
+$sql = "SELECT * FROM santri $whereClause ORDER BY created_at DESC LIMIT $limit OFFSET $offset";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
-$users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$santri_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <div class="min-h-screen">
+
     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
         <div>
-            <h1 class="text-3xl font-bold text-primary-900">Data Santri</h1>
-            <p class="text-gray-500 mt-1">Kelola akun pengguna yang terdaftar sebagai santri.</p>
+            <h1 class="text-3xl font-bold text-emerald-900">Data Master Santri</h1>
+            <p class="text-gray-500 mt-1">Kelola data santri, email login, dan wali.</p>
         </div>
-        <button onclick="openModalUser()"
+        <button onclick="openModalSantri()"
             class="bg-gold-500 hover:bg-gold-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center gap-2">
             <i class="fas fa-user-plus"></i> Tambah Santri
         </button>
@@ -55,11 +59,11 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="relative flex-grow">
                 <i class="fas fa-search absolute left-4 top-3.5 text-gray-400"></i>
                 <input type="text" name="search" value="<?= htmlspecialchars($search) ?>"
-                    class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary-600 focus:ring-2 focus:ring-primary-100 outline-none transition"
-                    placeholder="Cari nama, email, atau WhatsApp...">
+                    class="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 outline-none transition"
+                    placeholder="Cari Nama, NIS, Email, atau Kelas...">
             </div>
             <button type="submit"
-                class="bg-primary-700 hover:bg-primary-800 text-white px-6 rounded-xl font-medium transition shadow-md">
+                class="bg-emerald-700 hover:bg-emerald-800 text-white px-6 rounded-xl font-medium transition shadow-md">
                 Cari
             </button>
         </form>
@@ -68,80 +72,81 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
-                <thead class="bg-primary-900 text-white">
+                <thead class="bg-emerald-900 text-white">
                     <tr>
                         <th class="px-6 py-4 font-semibold text-sm uppercase tracking-wider">No</th>
-                        <th class="px-6 py-4 font-semibold text-sm uppercase tracking-wider">Info Peserta</th>
-                        <th class="px-6 py-4 font-semibold text-sm uppercase tracking-wider">Kontak</th>
+                        <th class="px-6 py-4 font-semibold text-sm uppercase tracking-wider">Identitas Santri</th>
+                        <th class="px-6 py-4 font-semibold text-sm uppercase tracking-wider">Wali & Kontak</th>
+                        <th class="px-6 py-4 font-semibold text-sm uppercase tracking-wider text-center">Kelas</th>
                         <th class="px-6 py-4 font-semibold text-sm uppercase tracking-wider text-center">JK</th>
-                        <th class="px-6 py-4 font-semibold text-sm uppercase tracking-wider text-center">Terdaftar</th>
                         <th class="px-6 py-4 font-semibold text-sm uppercase tracking-wider text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                    <?php if (count($users) > 0): ?>
-                        <?php foreach ($users as $index => $user): ?>
-                            <tr class="hover:bg-primary-50 transition-colors group">
+                    <?php if (count($santri_list) > 0): ?>
+                        <?php foreach ($santri_list as $index => $row):
+                            $foto = !empty($row['foto_santri']) ? '../assets/uploads/santri/' . $row['foto_santri'] : '../assets/img/avatar-santri.png';
+                            ?>
+                            <tr class="hover:bg-emerald-50 transition-colors group">
                                 <td class="px-6 py-4 text-gray-500 font-medium w-16">
                                     <?= $offset + $index + 1 ?>
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
-                                        <div
-                                            class="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold text-lg">
-                                            <?= strtoupper(substr($user['nama_lengkap'], 0, 1)) ?>
-                                        </div>
+
                                         <div>
-                                            <p class="font-bold text-gray-800 group-hover:text-primary-700 transition">
-                                                <?= htmlspecialchars($user['nama_lengkap']) ?>
+                                            <p class="font-bold text-gray-800 group-hover:text-emerald-700 transition">
+                                                <?= htmlspecialchars($row['nama_lengkap']) ?>
                                             </p>
-                                            <p class="text-xs text-gray-400">ID: #
-                                                <?= $user['id'] ?>
-                                            </p>
+                                            <div class="flex flex-col gap-0.5 mt-1">
+                                                <span class="text-xs text-gray-500 font-mono flex items-center gap-1">
+                                                    <i class="fas fa-id-card text-emerald-400"></i>
+                                                    <?= htmlspecialchars($row['nis']) ?>
+                                                </span>
+                                                <span class="text-xs text-gray-500 flex items-center gap-1">
+                                                    <i class="fas fa-envelope text-emerald-400"></i>
+                                                    <?= htmlspecialchars($row['email'] ?? '-') ?>
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="space-y-1">
                                         <div class="flex items-center gap-2 text-sm text-gray-600">
-                                            <i class="fas fa-envelope text-gold-500 w-4"></i>
-                                            <?= htmlspecialchars($user['email']) ?>
+                                            <i class="fas fa-user-friends text-gold-500 w-4"></i>
+                                            <?= htmlspecialchars($row['nama_wali']) ?>
                                         </div>
-                                        <?php if (!empty($user['no_whatsapp'])): ?>
-                                            <div class="flex items-center gap-2 text-sm text-gray-600">
-                                                <i class="fab fa-whatsapp text-green-500 w-4"></i>
-                                                <?= htmlspecialchars($user['no_whatsapp']) ?>
-                                            </div>
-                                        <?php endif; ?>
+                                        <div class="flex items-center gap-2 text-sm text-gray-600">
+                                            <i class="fab fa-whatsapp text-green-500 w-4"></i>
+                                            <?= htmlspecialchars($row['no_hp_wali']) ?>
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <?php if ($user['jenis_kelamin'] == 'Laki-laki'): ?>
-                                        <span
-                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                            L
-                                        </span>
-                                    <?php elseif ($user['jenis_kelamin'] == 'Perempuan'): ?>
-                                        <span
-                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
-                                            P
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="text-gray-400">-</span>
-                                    <?php endif; ?>
+                                    <span
+                                        class="bg-gray-100 text-gray-600 py-1 px-3 rounded-full text-xs font-bold border border-gray-200">
+                                        <?= htmlspecialchars($row['kelas']) ?>
+                                    </span>
                                 </td>
-                                <td class="px-6 py-4 text-center text-sm text-gray-500">
-                                    <?= date('d M Y', strtotime($user['created_at'])) ?>
+                                <td class="px-6 py-4 text-center">
+                                    <?php if ($row['jenis_kelamin'] == 'Laki-laki'): ?>
+                                        <span
+                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">L</span>
+                                    <?php else: ?>
+                                        <span
+                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800">P</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4 text-center">
                                     <div class="flex items-center justify-center gap-2">
-                                        <button onclick='editUser(<?= json_encode($user) ?>)'
+                                        <button onclick='editSantri(<?= json_encode($row) ?>)'
                                             class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition"
                                             title="Edit">
                                             <i class="fas fa-pencil-alt"></i>
                                         </button>
                                         <button
-                                            onclick="hapusUser(<?= $user['id'] ?>, '<?= htmlspecialchars($user['nama_lengkap']) ?>')"
+                                            onclick="hapusSantri(<?= $row['id'] ?>, '<?= htmlspecialchars($row['nama_lengkap']) ?>')"
                                             class="w-8 h-8 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center transition"
                                             title="Hapus">
                                             <i class="fas fa-trash-alt"></i>
@@ -157,7 +162,7 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
                                         <i class="fas fa-users-slash text-gray-400 text-2xl"></i>
                                     </div>
-                                    <p class="font-medium">Tidak ada data peserta ditemukan.</p>
+                                    <p class="font-medium">Belum ada data santri.</p>
                                 </div>
                             </td>
                         </tr>
@@ -168,14 +173,11 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         <?php if ($total_pages > 1): ?>
             <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
-                <span class="text-sm text-gray-500">Hal
-                    <?= $page ?> dari
-                    <?= $total_pages ?>
-                </span>
+                <span class="text-sm text-gray-500">Hal <?= $page ?> dari <?= $total_pages ?></span>
                 <div class="flex gap-1">
                     <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                         <a href="?page=<?= $i ?>&search=<?= urlencode($search) ?>"
-                            class="w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition <?= $i == $page ? 'bg-primary-600 text-white' : 'bg-white border text-gray-600 hover:bg-gray-100' ?>">
+                            class="w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition <?= $i == $page ? 'bg-emerald-600 text-white' : 'bg-white border text-gray-600 hover:bg-gray-100' ?>">
                             <?= $i ?>
                         </a>
                     <?php endfor; ?>
@@ -185,55 +187,74 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 </div>
 
-<div id="modalUser" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog"
+<div id="modalSantri" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog"
     aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" onclick="closeModalUser()"></div>
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" onclick="closeModalSantri()"></div>
 
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
         <div
             class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
-            <div class="bg-primary-900 px-6 py-4 flex justify-between items-center">
+            <div class="bg-emerald-900 px-6 py-4 flex justify-between items-center">
                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fas fa-user-circle"></i> <span id="modalTitle">Tambah Peserta</span>
+                    <i class="fas fa-user-graduate"></i> <span id="modalTitle">Tambah Santri</span>
                 </h3>
-                <button onclick="closeModalUser()" class="text-white hover:text-gray-200 transition">
+                <button onclick="closeModalSantri()" class="text-white hover:text-gray-200 transition">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
 
-            <form action="proses_user.php" method="POST" class="p-6 space-y-4">
-                <input type="hidden" name="user_id" id="userId">
+            <form action="proses_santri.php" method="POST" class="p-6 space-y-4">
+                <input type="hidden" name="id" id="santriId">
                 <input type="hidden" name="action" id="formAction" value="add">
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">NIS</label>
+                        <input type="text" name="nis" id="inputNIS" required
+                            class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Kelas/Asrama</label>
+                        <input type="text" name="kelas" id="inputKelas" required
+                            class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                </div>
 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Lengkap</label>
                     <input type="text" name="nama_lengkap" id="inputNama" required
-                        class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none">
+                        class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Email Address</label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Email (Untuk Login)</label>
                     <input type="email" name="email" id="inputEmail" required
-                        class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none">
+                        class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                        placeholder="contoh@santri.com">
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">No. WhatsApp</label>
-                        <input type="number" name="no_whatsapp" id="inputWA" required
-                            class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Wali</label>
+                        <input type="text" name="nama_wali" id="inputWali" required
+                            class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
                     </div>
-
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Jenis Kelamin</label>
-                        <select name="jenis_kelamin" id="inputJK"
-                            class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none bg-white">
-                            <option value="Laki-laki">Laki-laki</option>
-                            <option value="Perempuan">Perempuan</option>
-                        </select>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">WhatsApp Wali</label>
+                        <input type="number" name="no_hp_wali" id="inputHP" required
+                            class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
                     </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Jenis Kelamin</label>
+                    <select name="jenis_kelamin" id="inputJK"
+                        class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                        <option value="Laki-laki">Laki-laki</option>
+                        <option value="Perempuan">Perempuan</option>
+                    </select>
                 </div>
 
                 <div>
@@ -241,12 +262,12 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             class="text-xs text-red-500 font-normal hidden">(Kosongkan jika tidak ingin
                             mengubah)</span></label>
                     <input type="password" name="password" id="inputPassword"
-                        class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
+                        class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
                         placeholder="******">
                 </div>
 
                 <div class="pt-4 flex justify-end gap-3">
-                    <button type="button" onclick="closeModalUser()"
+                    <button type="button" onclick="closeModalSantri()"
                         class="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition">Batal</button>
                     <button type="submit"
                         class="px-5 py-2.5 rounded-xl bg-gold-500 text-white hover:bg-gold-600 font-bold shadow-lg transition">Simpan
@@ -257,60 +278,68 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    const modal = document.getElementById('modalUser');
+    const modal = document.getElementById('modalSantri');
     const title = document.getElementById('modalTitle');
     const formAction = document.getElementById('formAction');
-    const userId = document.getElementById('userId');
+    const santriId = document.getElementById('santriId');
     const hint = document.getElementById('passHint');
 
     // Inputs
+    const inNIS = document.getElementById('inputNIS');
+    const inKelas = document.getElementById('inputKelas');
     const inNama = document.getElementById('inputNama');
-    const inEmail = document.getElementById('inputEmail');
-    const inWA = document.getElementById('inputWA');
+    const inEmail = document.getElementById('inputEmail'); // New
+    const inWali = document.getElementById('inputWali');
+    const inHP = document.getElementById('inputHP');
     const inJK = document.getElementById('inputJK');
     const inPass = document.getElementById('inputPassword');
 
-    function openModalUser() {
+    function openModalSantri() {
         // Reset Form untuk Mode Tambah
-        title.innerText = 'Tambah Peserta Baru';
+        title.innerText = 'Tambah Santri Baru';
         formAction.value = 'add';
-        userId.value = '';
+        santriId.value = '';
         hint.classList.add('hidden');
         inPass.required = true; // Password wajib saat tambah
 
         // Clear Values
-        inNama.value = ''; inEmail.value = ''; inWA.value = ''; inJK.value = 'Laki-laki'; inPass.value = '';
+        inNIS.value = ''; inKelas.value = ''; inNama.value = ''; inEmail.value = '';
+        inWali.value = ''; inHP.value = ''; inJK.value = 'Laki-laki'; inPass.value = '';
 
         modal.classList.remove('hidden');
     }
 
-    function editUser(user) {
+    function editSantri(data) {
         // Isi Form untuk Mode Edit
-        title.innerText = 'Edit Data Peserta';
+        title.innerText = 'Edit Data Santri';
         formAction.value = 'edit';
-        userId.value = user.id;
+        santriId.value = data.id;
         hint.classList.remove('hidden');
         inPass.required = false; // Password opsional saat edit
 
         // Populate Values
-        inNama.value = user.nama_lengkap;
-        inEmail.value = user.email;
-        inWA.value = user.no_whatsapp;
-        inJK.value = user.jenis_kelamin;
-        inPass.value = ''; // Kosongkan password
+        inNIS.value = data.nis;
+        inKelas.value = data.kelas;
+        inNama.value = data.nama_lengkap;
+        inEmail.value = data.email || '';
+        inWali.value = data.nama_wali;
+        inHP.value = data.no_hp_wali;
+        inJK.value = data.jenis_kelamin;
+        inPass.value = '';
 
         modal.classList.remove('hidden');
     }
 
-    function closeModalUser() {
+    function closeModalSantri() {
         modal.classList.add('hidden');
     }
 
-    function hapusUser(id, nama) {
+    function hapusSantri(id, nama) {
         Swal.fire({
-            title: 'Hapus Peserta?',
-            text: `Anda yakin ingin menghapus akun "${nama}"? Semua data pendaftaran terkait juga akan terhapus.`,
+            title: 'Hapus Santri?',
+            text: `Anda yakin ingin menghapus data santri "${nama}"? Data pendaftaran dan presensi terkait akan ikut terhapus.`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
@@ -318,14 +347,14 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             cancelButtonText: 'Batal'
         }).then((result) => {
             if (result.isConfirmed) {
-                // Buat form submit dinamis
+                // Buat form submit dinamis untuk kirim POST request (lebih aman dari GET)
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = 'proses_user.php';
+                form.action = 'proses_santri.php';
 
                 const inputId = document.createElement('input');
                 inputId.type = 'hidden';
-                inputId.name = 'user_id';
+                inputId.name = 'id';
                 inputId.value = id;
 
                 const inputAction = document.createElement('input');
@@ -341,5 +370,29 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         });
     }
 </script>
+
+<?php if (isset($_SESSION['success'])): ?>
+    <script>
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: '<?= $_SESSION['success'] ?>',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    </script>
+    <?php unset($_SESSION['success']); ?>
+<?php endif; ?>
+
+<?php if (isset($_SESSION['error'])): ?>
+    <script>
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: '<?= $_SESSION['error'] ?>',
+        });
+    </script>
+    <?php unset($_SESSION['error']); ?>
+<?php endif; ?>
 
 <?php require_once BASE_PATH . '/admin/templates/footer.php'; ?>

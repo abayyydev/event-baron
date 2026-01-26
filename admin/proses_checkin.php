@@ -1,5 +1,6 @@
 <?php
 // admin/proses_checkin.php
+
 if (!defined('BASE_PATH')) {
     define('BASE_PATH', dirname(__DIR__));
 }
@@ -8,107 +9,130 @@ require_once BASE_PATH . '/core/koneksi.php';
 session_start();
 header('Content-Type: application/json');
 
+// Cek Login
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'penyelenggara') {
+    echo json_encode(['status' => 'error', 'message' => 'Unauthorized Access']);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] != 'POST') {
     echo json_encode(['status' => 'error', 'message' => 'Invalid Request']);
     exit;
 }
 
-$pendaftaran_id = $_POST['pendaftaran_id'] ?? null;
-// Bisa support scan by ID Pendaftaran atau Kode Unik (tergantung scanner)
-// Anggap scanner mengirim pendaftaran_id atau kode_unik
+$kode_scan = trim($_POST['kode_unik'] ?? '');
+$event_id = $_POST['event_id'] ?? 0; // Wajib ada untuk validasi Kartu Santri
 
-if (!$pendaftaran_id) {
-    echo json_encode(['status' => 'error', 'message' => 'Data tidak terbaca.']);
+if (empty($kode_scan)) {
+    echo json_encode(['status' => 'error', 'message' => 'Kode QR tidak terbaca.']);
     exit;
 }
 
 try {
-    // 1. AMBIL DATA PENDAFTARAN & EVENT
-    // Kita cari berdasarkan ID atau Kode Unik
+    // --- LOGIKA PENCARIAN CERDAS ---
+
+    // SKENARIO 1: Scan menggunakan E-TICKET (Kode Unik Transaksi)
+    // Format biasanya: WS-1-XXXXXX
     $sql = "SELECT p.*, w.judul, w.jam_selesai, w.nominal_denda 
             FROM pendaftaran p 
             JOIN workshops w ON p.workshop_id = w.id 
-            WHERE p.id = ? OR p.kode_unik = ?";
+            WHERE p.kode_unik = ?";
 
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$pendaftaran_id, $pendaftaran_id]);
+    $stmt->execute([$kode_scan]);
     $data = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    // SKENARIO 2: Scan menggunakan KARTU SANTRI (Barcode Santri)
+    // Jika Skenario 1 gagal, kita cek apakah ini barcode santri
+    if (!$data && !empty($event_id)) {
+        // Cari pendaftaran berdasarkan Barcode Santri DAN Event ID yang sedang aktif
+        $sql_santri = "SELECT p.*, w.judul, w.jam_selesai, w.nominal_denda 
+                       FROM pendaftaran p
+                       JOIN workshops w ON p.workshop_id = w.id
+                       JOIN santri s ON p.santri_id = s.id
+                       WHERE s.barcode_code = ? AND p.workshop_id = ?";
+
+        $stmt_santri = $pdo->prepare($sql_santri);
+        $stmt_santri->execute([$kode_scan, $event_id]);
+        $data = $stmt_santri->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Jika masih tidak ketemu
     if (!$data) {
-        echo json_encode(['status' => 'error', 'message' => 'Peserta tidak ditemukan.']);
+        echo json_encode(['status' => 'error', 'message' => 'Data tidak ditemukan. Pastikan Santri sudah terdaftar di event ini.']);
         exit;
     }
 
+    // --- LOGIKA PROSES (SAMA SEPERTI SEBELUMNYA) ---
+
     $now = date('Y-m-d H:i:s');
+    $waktu_sekarang = time();
     $response = [];
 
-    // 2. LOGIKA CHECK-IN / CHECK-OUT
+    // A. LOGIKA CHECK-IN
+    // Cek jika status kehadiran belum 'hadir' ATAU belum ada jam checkin
+    if (empty($data['check_in_at']) || $data['status_kehadiran'] != 'hadir') {
 
-    // A. JIKA BELUM CHECK-IN -> LAKUKAN CHECK-IN
-    if (empty($data['check_in_at'])) {
         $upd = $pdo->prepare("UPDATE pendaftaran SET check_in_at = ?, status_kehadiran = 'hadir' WHERE id = ?");
         $upd->execute([$now, $data['id']]);
 
-        echo json_encode([
+        $response = [
             'status' => 'success',
             'type' => 'checkin',
-            'nama' => $data['nama_peserta'],
-            'waktu' => date('H:i', strtotime($now)),
-            'message' => 'Berhasil Check-in!'
-        ]);
-        exit;
+            'data' => [
+                'nama_peserta' => $data['nama_peserta'],
+                'event' => $data['judul'],
+                'waktu' => date('H:i', $waktu_sekarang)
+            ],
+            'message' => 'Check-in Berhasil!'
+        ];
     }
-
-    // B. JIKA SUDAH CHECK-IN TAPI BELUM CHECK-OUT -> CEK DENDA
+    // B. LOGIKA CHECK-OUT
     else if (empty($data['check_out_at'])) {
 
-        // Cek Apakah Melebihi Batas Waktu
-        $batas_waktu = $data['jam_selesai'];
+        // Cek Denda
+        $jam_selesai_event = strtotime(date('Y-m-d') . ' ' . $data['jam_selesai']);
         $kena_denda = false;
 
-        // Logic Denda: Jika waktu sekarang > jam selesai DAN denda > 0
-        if ($data['nominal_denda'] > 0 && strtotime($now) > strtotime($batas_waktu)) {
+        if ($data['nominal_denda'] > 0 && $waktu_sekarang > $jam_selesai_event) {
             $kena_denda = true;
         }
 
-        if ($kena_denda) {
-            // JANGAN UPDATE check_out_at dulu, tapi kirim status DENDA
-            // Update status denda di database
+        if ($kena_denda && $data['status_denda'] != 'lunas') {
+            // Update status denda
             $upd = $pdo->prepare("UPDATE pendaftaran SET status_denda = 'kena_denda' WHERE id = ?");
             $upd->execute([$data['id']]);
 
             echo json_encode([
-                'status' => 'denda', // Trigger Popup Denda di JS
-                'nama' => $data['nama_peserta'],
-                'denda' => number_format($data['nominal_denda'], 0, ',', '.'),
-                'nominal_raw' => $data['nominal_denda'],
-                'batas' => date('H:i d M', strtotime($batas_waktu)),
-                'message' => 'Melebihi Batas Waktu!'
+                'status' => 'error', // UI Merah/Warning
+                'type' => 'denda',
+                'message' => 'Terlambat Check-out! Denda: Rp ' . number_format($data['nominal_denda'], 0, ',', '.')
             ]);
             exit;
         } else {
-            // Lakukan Check-out Normal
+            // Check-out Normal
             $upd = $pdo->prepare("UPDATE pendaftaran SET check_out_at = ? WHERE id = ?");
             $upd->execute([$now, $data['id']]);
 
-            echo json_encode([
+            $response = [
                 'status' => 'success',
                 'type' => 'checkout',
-                'nama' => $data['nama_peserta'],
-                'waktu' => date('H:i', strtotime($now)),
-                'message' => 'Berhasil Check-out!'
-            ]);
-            exit;
+                'data' => [
+                    'nama_peserta' => $data['nama_peserta'],
+                    'event' => $data['judul'],
+                    'waktu' => date('H:i', $waktu_sekarang)
+                ],
+                'message' => 'Check-out Berhasil!'
+            ];
         }
-    }
-
-    // C. JIKA SUDAH CHECK-OUT SEBELUMNYA
-    else {
-        echo json_encode(['status' => 'error', 'message' => 'Peserta ini sudah Check-out sebelumnya.']);
+    } else {
+        echo json_encode(['status' => 'error', 'message' => 'Peserta ini sudah selesai (Check-out).']);
         exit;
     }
 
+    echo json_encode($response);
+
 } catch (Exception $e) {
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    echo json_encode(['status' => 'error', 'message' => 'Database Error: ' . $e->getMessage()]);
 }
 ?>

@@ -4,18 +4,12 @@ require_once '../core/koneksi.php';
 
 header('Content-Type: application/json');
 
-// 🔹 Fungsi kirim JSON response (dengan opsi debug)
 function send_json_response($status, $message, $debug = null)
 {
-    echo json_encode([
-        'status' => $status,
-        'message' => $message,
-        'debug' => $debug
-    ]);
+    echo json_encode(['status' => $status, 'message' => $message, 'debug' => $debug]);
     exit();
 }
 
-// 🔹 Cek metode request
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     send_json_response('error', 'Metode request tidak valid.');
 }
@@ -26,24 +20,46 @@ if (!$no_whatsapp) {
 }
 
 try {
-    // 🔹 Cek apakah nomor terdaftar
+    $role_target = '';
+    $user_id = 0;
+
+    // 1. CEK DI TABEL USERS (ADMIN) DULU
     $stmt = $pdo->prepare("SELECT id FROM users WHERE no_whatsapp = ?");
     $stmt->execute([$no_whatsapp]);
-    if ($stmt->rowCount() === 0) {
-        send_json_response('error', 'Nomor WhatsApp tidak terdaftar.');
+    $admin = $stmt->fetch();
+
+    if ($admin) {
+        $role_target = 'admin';
+        $user_id = $admin['id'];
+    } else {
+        // 2. KALAU GAK ADA DI ADMIN, CEK DI SANTRI (WALI)
+        $stmtSantri = $pdo->prepare("SELECT id FROM santri WHERE no_hp_wali = ?");
+        $stmtSantri->execute([$no_whatsapp]);
+        $santri = $stmtSantri->fetch();
+
+        if ($santri) {
+            $role_target = 'santri';
+            $user_id = $santri['id'];
+        } else {
+            send_json_response('error', 'Nomor WhatsApp tidak terdaftar (Admin maupun Wali Santri).');
+        }
     }
 
-    // 🔹 Buat OTP dan waktu kedaluwarsa (5 menit)
+    // 3. GENERATE OTP
     $otpCode = rand(100000, 999999);
-    $expiresAt = date('Y-m-d H:i:s', time() + (5 * 60));
+    $expiresAt = date('Y-m-d H:i:s', time() + (5 * 60)); // 5 Menit
 
-    // 🔹 Simpan OTP ke database
-    $stmt_update = $pdo->prepare("UPDATE users SET otp_code = ?, otp_expires_at = ? WHERE no_whatsapp = ?");
-    $stmt_update->execute([$otpCode, $expiresAt, $no_whatsapp]);
+    // 4. SIMPAN OTP KE TABEL YANG SESUAI
+    if ($role_target == 'admin') {
+        $stmt_update = $pdo->prepare("UPDATE users SET otp_code = ?, otp_expires_at = ? WHERE id = ?");
+    } else {
+        $stmt_update = $pdo->prepare("UPDATE santri SET otp_code = ?, otp_expires_at = ? WHERE id = ?");
+    }
+    $stmt_update->execute([$otpCode, $expiresAt, $user_id]);
 
-    // 🔹 Kirim OTP via Fonnte
-    $fonnte_token = 'Z8uhStEJetBt3v6Hhau8'; // 🔸 GANTI dengan token kamu yang valid
-    $message = "Kode OTP Anda adalah: *{$otpCode}*. Jangan berikan kode ini kepada siapapun.";
+    // 5. KIRIM VIA FONNTE
+    $fonnte_token = 'eSJDYxaMoxjNvy8vTuDy'; // GANTI TOKEN SESUAI MILIKMU
+    $message = "🔐 *Kode Login Sistem Event*\n\nKode OTP Anda: *{$otpCode}*\nBerlaku selama 5 menit.\n\n_Ponpes Al Ihsan Baron_";
 
     $curl = curl_init();
     curl_setopt_array($curl, array(
@@ -66,27 +82,13 @@ try {
     $curlError = curl_error($curl);
     curl_close($curl);
 
-    // 🔹 Logging ke file
-    $logPath = __DIR__ . '/log_fonnte.txt';
-    $logData = date('Y-m-d H:i:s') . " | Nomor: {$no_whatsapp} | OTP: {$otpCode} | CurlError: {$curlError} | Response: {$response}\n";
-    file_put_contents($logPath, $logData, FILE_APPEND);
-
-    // 🔹 Tangani error dari cURL
     if ($curlError) {
-        send_json_response('error', 'Gagal mengirim OTP: ' . $curlError, $response);
+        send_json_response('error', 'Gagal koneksi Fonnte: ' . $curlError);
     }
 
-    // 🔹 Decode hasil dari Fonnte
-    $fonnteResult = json_decode($response, true);
-    if (!$fonnteResult || (isset($fonnteResult['status']) && $fonnteResult['status'] == false)) {
-        $reason = $fonnteResult['reason'] ?? 'Tidak diketahui';
-        send_json_response('error', 'Gagal kirim OTP: ' . $reason, $response);
-    }
-
-    // 🔹 Sukses kirim OTP
-    send_json_response('success', 'OTP telah dikirim ke nomor WhatsApp Anda.', $response);
+    send_json_response('success', 'Kode OTP terkirim ke WhatsApp Anda.', $response);
 
 } catch (PDOException $e) {
-    send_json_response('error', 'Terjadi masalah pada database: ' . $e->getMessage());
+    send_json_response('error', 'DB Error: ' . $e->getMessage());
 }
 ?>

@@ -1,71 +1,95 @@
 <?php
 // admin/proses_tambah_peserta_internal.php
-if (!defined('BASE_PATH'))
-    define('BASE_PATH', dirname(__DIR__));
-require_once BASE_PATH . '/core/koneksi.php';
-session_start();
 
-// Validasi Akses
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'penyelenggara') {
-    die("Akses ditolak.");
+require_once '../core/koneksi.php';
+
+header('Content-Type: application/json');
+
+// 1. Validasi Request
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    echo json_encode(['status' => 'error', 'message' => 'Invalid Request']);
+    exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['user_ids'])) {
-    $workshop_id = $_POST['workshop_id'];
-    $user_ids = $_POST['user_ids']; // Ini array [1, 5, 10, ...]
+$event_id = $_POST['workshop_id'] ?? 0;
+$santri_ids = $_POST['santri_ids'] ?? [];
 
-    $sukses = 0;
+if (empty($event_id) || empty($santri_ids)) {
+    echo json_encode(['status' => 'error', 'message' => 'Tidak ada santri yang dipilih.']);
+    exit;
+}
 
-    try {
-        $pdo->beginTransaction();
+try {
+    $pdo->beginTransaction();
 
-        // Siapkan query insert sekali saja di luar loop untuk efisiensi prepare
-        $sql_ins = "INSERT INTO pendaftaran (workshop_id, user_id, kode_unik, nama_peserta, email_peserta, telepon_peserta, jenis_kelamin, status_pembayaran) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 'free')";
-        $stmt_ins = $pdo->prepare($sql_ins);
+    // 2. Ambil Data Santri Terpilih (Sekarang termasuk jenis_kelamin)
+    $placeholders = implode(',', array_fill(0, count($santri_ids), '?'));
 
-        // Loop setiap ID User yang dicentang
-        foreach ($user_ids as $uid) {
-            // 1. Ambil Data User Lengkap
-            $stmt_u = $pdo->prepare("SELECT nama_lengkap, email, no_whatsapp, jenis_kelamin FROM users WHERE id = ?");
-            $stmt_u->execute([$uid]);
-            $user = $stmt_u->fetch();
+    $stmt_santri = $pdo->prepare("SELECT * FROM santri WHERE id IN ($placeholders)");
+    $stmt_santri->execute($santri_ids);
+    $data_santri = $stmt_santri->fetchAll(PDO::FETCH_ASSOC);
 
-            if ($user) {
-                // 2. Cek apakah sudah terdaftar (double check)
-                $stmt_cek = $pdo->prepare("SELECT id FROM pendaftaran WHERE workshop_id = ? AND user_id = ?");
-                $stmt_cek->execute([$workshop_id, $uid]);
+    // 3. Siapkan Query Insert & Cek Duplikat
+    $stmt_check = $pdo->prepare("SELECT id FROM pendaftaran WHERE workshop_id = ? AND santri_id = ?");
 
-                if ($stmt_cek->rowCount() == 0) {
-                    // 3. Generate QR Code / Kode Unik
-                    $kode_unik = "WS-" . $workshop_id . "-" . strtoupper(bin2hex(random_bytes(3)));
+    // Perhatikan: Kolom 'jenis_kelamin' ikut di-insert
+    $sql_insert = "INSERT INTO pendaftaran 
+        (workshop_id, santri_id, kode_unik, nama_peserta, email_peserta, telepon_peserta, jenis_kelamin, 
+         status_pembayaran, status_kehadiran, didaftarkan_oleh) 
+        VALUES 
+        (:eid, :sid, :kode, :nama, :email, :telp, :jk, 'free', 'absen', 'admin')";
 
-                    // 4. Insert ke Pendaftaran
-                    $stmt_ins->execute([
-                        $workshop_id,
-                        $uid,
-                        $kode_unik,
-                        $user['nama_lengkap'],
-                        $user['email'],
-                        $user['no_whatsapp'],
-                        $user['jenis_kelamin']
-                    ]);
-                    $sukses++;
-                }
-            }
+    $stmt_insert = $pdo->prepare($sql_insert);
+
+    $count_success = 0;
+    $count_skip = 0;
+
+    foreach ($data_santri as $s) {
+        // A. Cek apakah sudah terdaftar
+        $stmt_check->execute([$event_id, $s['id']]);
+        if ($stmt_check->rowCount() > 0) {
+            $count_skip++;
+            continue; // Skip jika sudah ada
         }
 
-        $pdo->commit();
+        // B. Generate Data
+        $kode_unik = "WS-" . $event_id . "-" . strtoupper(bin2hex(random_bytes(3)));
 
-        // Redirect kembali dengan pesan sukses
-        header("Location: kelola_pendaftar.php?id=$workshop_id&status=success&msg=" . urlencode("$sukses Santri berhasil ditambahkan."));
+        // Email Dummy jika santri tidak punya email
+        $email_insert = !empty($s['email']) ? $s['email'] : $s['nis'] . '@santri.ponpes';
 
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        die("Error: " . $e->getMessage());
+        // Pastikan jenis kelamin diambil dari data santri
+        // Jika di data santri kosong/null, default ke 'Laki-laki'
+        $jenis_kelamin = !empty($s['jenis_kelamin']) ? $s['jenis_kelamin'] : 'Laki-laki';
+
+        // C. Eksekusi Insert
+        $stmt_insert->execute([
+            'eid' => $event_id,
+            'sid' => $s['id'],
+            'kode' => $kode_unik,
+            'nama' => $s['nama_lengkap'],
+            'email' => $email_insert,
+            'telp' => $s['no_hp_wali'],
+            'jk' => $jenis_kelamin // <--- Ini yang baru
+        ]);
+
+        $count_success++;
     }
-} else {
-    // Jika tidak ada yang dicentang
-    header("Location: kelola_pendaftar.php?id={$_POST['workshop_id']}&status=error&msg=" . urlencode("Tidak ada peserta yang dipilih."));
+
+    $pdo->commit();
+
+    // Pesan feedback
+    $msg = "$count_success santri berhasil ditambahkan.";
+    if ($count_skip > 0) {
+        $msg .= " ($count_skip santri dilewati karena sudah terdaftar)";
+    }
+
+    echo json_encode(['status' => 'success', 'message' => $msg]);
+
+} catch (Exception $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    echo json_encode(['status' => 'error', 'message' => 'Database Error: ' . $e->getMessage()]);
 }
 ?>
