@@ -1,5 +1,6 @@
 <?php
-// Pastikan BASE_PATH terdefinisi
+// admin/lihat_hasil_kuesioner.php
+
 if (!defined('BASE_PATH')) {
     define('BASE_PATH', dirname(__DIR__));
 }
@@ -38,26 +39,28 @@ $stmt_q = $pdo->prepare("SELECT * FROM workshop_questions WHERE workshop_id = ? 
 $stmt_q->execute([$id_workshop]);
 $questions = $stmt_q->fetchAll(PDO::FETCH_ASSOC);
 
-// 3. Ambil Semua Jawaban + Data User (Untuk Isi Tabel)
-$sql_ans = "SELECT a.*, u.nama_lengkap, u.email 
+// 3. Ambil Semua Jawaban + Data Santri (PERBAIKAN DI SINI)
+// Menggunakan tabel santri dan kolom santri_id
+$sql_ans = "SELECT a.*, s.nama_lengkap, s.email, s.nis 
             FROM workshop_answers a 
-            JOIN users u ON a.user_id = u.id 
+            JOIN santri s ON a.santri_id = s.id 
             WHERE a.workshop_id = ? 
             ORDER BY a.created_at DESC";
 $stmt_a = $pdo->prepare($sql_ans);
 $stmt_a->execute([$id_workshop]);
 $raw_answers = $stmt_a->fetchAll(PDO::FETCH_ASSOC);
 
-// 4. Grouping Data per User (Pivot Manual)
+// 4. Grouping Data per Santri (Pivot Manual)
 $respondents = [];
 foreach ($raw_answers as $row) {
-    $uid = $row['user_id'];
+    $uid = $row['santri_id']; // Gunakan santri_id sebagai key
     if (!isset($respondents[$uid])) {
         $respondents[$uid] = [
             'nama' => $row['nama_lengkap'],
-            'email' => $row['email'],
+            'email' => $row['email'], // Email bisa null jika belum diisi admin
+            'nis' => $row['nis'],     // Tambahan info NIS
             'waktu' => $row['created_at'],
-            'answers' => [] // Array untuk menyimpan jawaban per pertanyaan
+            'answers' => [] 
         ];
     }
     // Key-nya adalah ID Pertanyaan, Value-nya adalah Jawaban
@@ -67,9 +70,7 @@ foreach ($raw_answers as $row) {
 
 <div class="min-h-screen bg-gray-50 font-sans pb-32">
     
-    <!-- Hero Header Section -->
     <div class="bg-emerald-900 pb-32 pt-10 px-4 rounded-b-[3rem] shadow-xl relative overflow-hidden">
-        <!-- Elemen Dekoratif Background -->
         <div class="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-emerald-800 rounded-full opacity-50 blur-3xl"></div>
         <div class="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-amber-500 rounded-full opacity-20 blur-2xl"></div>
 
@@ -102,12 +103,9 @@ foreach ($raw_answers as $row) {
         </div>
     </div>
 
-    <!-- Main Content (Overlapping) -->
     <div class="max-w-7xl mx-auto px-4 -mt-20 relative z-20 space-y-8">
         
-        <!-- Stats Cards Grid -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Card 1: Total Responden -->
             <div class="bg-white p-6 rounded-3xl shadow-lg border border-gray-100 flex items-center gap-5 hover:shadow-xl transition-shadow duration-300">
                 <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-600 flex items-center justify-center text-2xl shadow-sm">
                     <i class="fas fa-users"></i>
@@ -120,7 +118,6 @@ foreach ($raw_answers as $row) {
                 </div>
             </div>
 
-            <!-- Card 2: Status Kuesioner -->
             <div class="bg-white p-6 rounded-3xl shadow-lg border border-gray-100 flex items-center gap-5 hover:shadow-xl transition-shadow duration-300">
                 <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-100 to-emerald-200 text-emerald-600 flex items-center justify-center text-2xl shadow-sm">
                     <i class="fas <?= $event['is_kuesioner_active'] ? 'fa-check-circle' : 'fa-pause-circle' ?>"></i>
@@ -136,7 +133,6 @@ foreach ($raw_answers as $row) {
                 </div>
             </div>
 
-             <!-- Card 3: Info Tambahan (Misal Total Pertanyaan) -->
              <div class="bg-white p-6 rounded-3xl shadow-lg border border-gray-100 flex items-center gap-5 hover:shadow-xl transition-shadow duration-300">
                 <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 text-amber-600 flex items-center justify-center text-2xl shadow-sm">
                     <i class="fas fa-clipboard-list"></i>
@@ -150,7 +146,6 @@ foreach ($raw_answers as $row) {
             </div>
         </div>
 
-        <!-- Table Card -->
         <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
             <div class="bg-gray-50/50 px-8 py-6 border-b border-gray-100 flex justify-between items-center">
                 <div class="flex items-center gap-3">
@@ -223,7 +218,7 @@ foreach ($raw_answers as $row) {
                                                             <?= htmlspecialchars($data['nama']) ?>
                                                         </p>
                                                         <p class="text-xs text-gray-500 mb-1">
-                                                            <?= htmlspecialchars($data['email']) ?>
+                                                            <?= htmlspecialchars(!empty($data['email']) ? $data['email'] : 'NIS: ' . $data['nis']) ?>
                                                         </p>
                                                         <p class="text-[10px] inline-flex items-center gap-1 text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-200">
                                                             <i class="far fa-clock"></i>
@@ -240,14 +235,12 @@ foreach ($raw_answers as $row) {
                                                         if (is_null($ans) || $ans === '') {
                                                             echo '<span class="text-gray-300 italic text-xs">Tidak menjawab</span>';
                                                         } elseif ($q['question_type'] == 'rating') {
-                                                            // Tampilan khusus rating (bintang)
                                                             echo '<div class="flex items-center gap-1.5">';
                                                             echo '<span class="text-amber-400 text-sm"><i class="fas fa-star"></i></span>';
                                                             echo '<span class="font-bold text-gray-700">' . $ans . '</span>';
                                                             echo '<span class="text-xs text-gray-400">/ 5</span>';
                                                             echo '</div>';
                                                         } else {
-                                                            // Tampilan text biasa
                                                             echo '<span class="text-gray-700 leading-relaxed block max-w-xs">' . nl2br(htmlspecialchars($ans)) . '</span>';
                                                         }
                                                         ?>
@@ -263,24 +256,21 @@ foreach ($raw_answers as $row) {
     </div>
 </div>
 
-<!-- Print Styles (Hanya aktif saat print) -->
 <style>
     @media print {
-        body { background: white; }
+        body { background: white; -webkit-print-color-adjust: exact; }
         .min-h-screen { padding: 0; }
-        /* Hide UI elements */
         .shadow-xl, .shadow-lg, .shadow-sm { box-shadow: none !important; border: 1px solid #ddd !important; }
         button, a[href^="kelola_event"], a[href^="kelola_kuesioner"] { display: none !important; }
-        /* Adjust layout for A4 */
         .max-w-7xl { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
         .bg-emerald-900 { background: white !important; padding: 20px !important; color: black !important; border-bottom: 2px solid #000; border-radius: 0 !important; }
-        .text-white, .text-emerald-200, .text-emerald-100\/80 { color: black !important; }
+        .text-white { color: black !important; }
+        .text-emerald-200 { display: none; }
         .bg-white { background: transparent !important; }
         .grid { display: flex; flex-wrap: wrap; gap: 20px; }
         .-mt-20 { margin-top: 0 !important; }
-        table { font-size: 10pt; width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #000 !important; padding: 5px !important; }
-        /* Sembunyikan dekorasi */
+        table { font-size: 9pt; width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #000 !important; padding: 5px !important; page-break-inside: avoid; }
         .absolute { display: none !important; }
     }
 </style>

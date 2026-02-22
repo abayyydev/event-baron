@@ -1,4 +1,6 @@
 <?php
+// api/verify_otp.php
+
 session_start();
 require_once '../core/koneksi.php';
 
@@ -14,25 +16,39 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     send_json_response('error', 'Metode salah.');
 }
 
-$no_whatsapp = $_POST['no_whatsapp'] ?? null;
+$raw_wa = $_POST['no_whatsapp'] ?? null;
 $otp_code = $_POST['otp_code'] ?? null;
 
-if (!$no_whatsapp || !$otp_code) {
+if (!$raw_wa || !$otp_code) {
     send_json_response('error', 'Data tidak lengkap.');
 }
 
+// --- LOGIKA NORMALISASI NOMOR (COPY DARI REQUEST_OTP) ---
+$clean_num = preg_replace('/[^0-9]/', '', $raw_wa);
+
+if (substr($clean_num, 0, 3) == '620') {
+    $wa_db = '0' . substr($clean_num, 3);
+} elseif (substr($clean_num, 0, 2) == '62') {
+    $wa_db = '0' . substr($clean_num, 2);
+} elseif (substr($clean_num, 0, 1) == '0') {
+    $wa_db = $clean_num;
+} else {
+    $wa_db = '0' . $clean_num;
+}
+$wa_api = '62' . substr($wa_db, 1);
+
 try {
     // 1. CEK DI TABEL USERS (ADMIN)
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE no_whatsapp = ? AND otp_code = ?");
-    $stmt->execute([$no_whatsapp, $otp_code]);
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE (no_whatsapp = ? OR no_whatsapp = ?) AND otp_code = ?");
+    $stmt->execute([$wa_db, $wa_api, $otp_code]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($user) {
-        // --- LOGIC ADMIN ---
         if (strtotime($user['otp_expires_at']) < time()) {
             send_json_response('error', 'Kode OTP kadaluwarsa.');
         }
 
+        // Set Session Admin
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['role'] = $user['role'];
         $_SESSION['owner_id'] = $user['owner_id'];
@@ -40,51 +56,45 @@ try {
         $_SESSION['nama_lengkap'] = $user['nama_lengkap'];
         $_SESSION['email'] = $user['email'];
 
-        // Handle Foto
         if (!empty($user['foto_profil'])) {
-            $_SESSION['foto_profil'] = (strpos($user['foto_profil'], 'assets/') !== false)
-                ? $user['foto_profil']
-                : 'assets/uploads/profil/' . $user['foto_profil'];
+            $_SESSION['foto_profil'] = (strpos($user['foto_profil'], 'assets/') !== false) ? $user['foto_profil'] : 'assets/uploads/profil/' . $user['foto_profil'];
         } else {
             $_SESSION['foto_profil'] = 'assets/img/download.jpg';
         }
 
-        // Bersihkan OTP
+        // Reset OTP
         $pdo->prepare("UPDATE users SET otp_code = NULL WHERE id = ?")->execute([$user['id']]);
-        send_json_response('success', 'Login Berhasil!', 'admin'); // Redirect ke Admin
+        send_json_response('success', 'Login Berhasil!', 'admin');
     }
 
-    // 2. JIKA BUKAN ADMIN, CEK DI TABEL SANTRI
+    // 2. CEK DI TABEL SANTRI
     else {
-        $stmtSantri = $pdo->prepare("SELECT * FROM santri WHERE no_hp_wali = ? AND otp_code = ?");
-        $stmtSantri->execute([$no_whatsapp, $otp_code]);
+        $stmtSantri = $pdo->prepare("SELECT * FROM santri WHERE (no_hp_wali = ? OR no_hp_wali = ?) AND otp_code = ?");
+        $stmtSantri->execute([$wa_db, $wa_api, $otp_code]);
         $santri = $stmtSantri->fetch(PDO::FETCH_ASSOC);
 
         if ($santri) {
-            // --- LOGIC SANTRI ---
             if (strtotime($santri['otp_expires_at']) < time()) {
                 send_json_response('error', 'Kode OTP kadaluwarsa.');
             }
 
+            // Set Session Santri
             $_SESSION['santri_id'] = $santri['id'];
-            $_SESSION['user_id'] = $santri['id']; // Fallback
+            $_SESSION['user_id'] = $santri['id'];
             $_SESSION['nama_lengkap'] = $santri['nama_lengkap'];
             $_SESSION['role'] = 'peserta';
             $_SESSION['nis'] = $santri['nis'];
             $_SESSION['barcode_code'] = $santri['barcode_code'];
 
-            // Handle Foto
             if (!empty($santri['foto_santri'])) {
-                $_SESSION['foto_profil'] = (strpos($santri['foto_santri'], 'assets/') !== false)
-                    ? $santri['foto_santri']
-                    : 'assets/uploads/santri/' . $santri['foto_santri'];
+                $_SESSION['foto_profil'] = (strpos($santri['foto_santri'], 'assets/') !== false) ? $santri['foto_santri'] : 'assets/uploads/santri/' . $santri['foto_santri'];
             } else {
                 $_SESSION['foto_profil'] = 'assets/img/avatar-santri.png';
             }
 
-            // Bersihkan OTP
+            // Reset OTP
             $pdo->prepare("UPDATE santri SET otp_code = NULL WHERE id = ?")->execute([$santri['id']]);
-            send_json_response('success', 'Login Berhasil!', 'user'); // Redirect ke User
+            send_json_response('success', 'Login Berhasil!', 'user');
         } else {
             send_json_response('error', 'Kode OTP salah atau nomor tidak cocok.');
         }

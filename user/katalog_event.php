@@ -116,7 +116,7 @@ try {
                     $is_free = ($row['tipe_event'] == 'gratis' || $row['harga'] <= 0);
                     ?>
                     <div
-                        class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col h-full hover:-translate-y-1">
+                        class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-300 group flex flex-col h-full hover:-translate-y-1 relative">
 
                         <div class="h-48 bg-slate-200 relative overflow-hidden">
                             <img src="<?= $poster ?>"
@@ -131,6 +131,12 @@ try {
                                     class="bg-white/90 backdrop-blur text-primary-900 text-[10px] font-bold px-3 py-1 rounded-full shadow-sm uppercase tracking-wide">
                                     <?= strtoupper($row['visibilitas']) ?>
                                 </span>
+                                <?php if ($is_registered): ?>
+                                    <span
+                                        class="bg-emerald-500/90 backdrop-blur text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm uppercase tracking-wide flex items-center gap-1">
+                                        <i class="fas fa-check-circle"></i> Terdaftar
+                                    </span>
+                                <?php endif; ?>
                             </div>
 
                             <div class="absolute top-4 right-4">
@@ -170,18 +176,15 @@ try {
                             </p>
 
                             <div class="mt-auto pt-4 border-t border-slate-50">
-                                <?php if ($is_registered): ?>
-                                    <a href="tiket_saya.php"
-                                        class="w-full flex items-center justify-center gap-2 bg-white border border-primary-500 text-primary-600 font-bold py-3 rounded-xl transition-all hover:bg-primary-50 shadow-sm text-sm">
-                                        <i class="fas fa-check-circle"></i> Sudah Terdaftar
-                                    </a>
-                                <?php else: ?>
-                                    <a href="daftar_event.php?id=<?= $row['id'] ?>"
-                                        class="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-primary-600 text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg group-hover:shadow-primary-500/20 text-sm">
+                                <a href="daftar_event.php?id=<?= $row['id'] ?>"
+                                    class="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-primary-600 text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg group-hover:shadow-primary-500/20 text-sm">
+                                    <?php if ($is_registered): ?>
+                                        <i class="fas fa-user-plus"></i> Daftar Lagi
+                                    <?php else: ?>
                                         Daftar Sekarang <i
                                             class="fas fa-arrow-right text-xs transition-transform group-hover:translate-x-1"></i>
-                                    </a>
-                                <?php endif; ?>
+                                    <?php endif; ?>
+                                </a>
                             </div>
                         </div>
                     </div>
